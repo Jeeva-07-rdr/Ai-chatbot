@@ -1,0 +1,22 @@
+        <!-- Server side alerts -->
+        {% if download_url %}
+        <div class="alert alert-premium mt-4 text-center" id="successAlert" style="display:block;">
+            <h4>
+                <i class="fas fa-check-circle me-2"></i>Successful!
+            </h4>
+            <br>
+            <a href="{{ download_url }}" class="btn download-btn" id="downloadBtn">
+                <i class="fas fa-download me-2"></i>Download Result File
+            </a>
+        </div>
+        {% else %}
+        <div class="alert alert-premium mt-4 text-center" id="successAlert" style="display:none;">
+            <h4>
+                <i class="fas fa-check-circle me-2"></i>Successful!
+            </h4>
+            <br>
+            <a href="#" class="btn download-btn" id="downloadBtn">
+                <i class="fas fa-download me-2"></i>Download Result File
+            </a>
+        </div>
+        {% endif %}

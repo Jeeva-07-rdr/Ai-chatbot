@@ -1,0 +1,158 @@
+<!-- Microsoft Word-themed Workspace Modal -->
+<div class="word-modal" id="wordModal" style="display:none;">
+    <!-- Top Header Toolbar (Microsoft Word Ribbon Style) -->
+    <div class="word-header">
+        <div class="word-title-sec">
+            <i class="fas fa-file-word text-primary" style="font-size: 20px;"></i>
+            <span id="wordDocName">document.docx</span>
+        </div>
+        
+        <!-- Ribbon groups -->
+        <div class="word-ribbon-scroll" onmousedown="wordRibbonMouseDown(event)">
+        <div class="word-ribbon-container">
+            <!-- Undo / Redo group -->
+            <div class="word-ribbon-group">
+                <button type="button" class="word-ribbon-btn" onclick="execWordCmd('undo')" title="Undo (Ctrl+Z)">
+                    <i class="fas fa-undo"></i>
+                </button>
+                <button type="button" class="word-ribbon-btn" onclick="execWordCmd('redo')" title="Redo (Ctrl+Y)">
+                    <i class="fas fa-redo"></i>
+                </button>
+            </div>
+            
+            <div class="word-ribbon-divider"></div>
+            
+            <!-- Font dropdown & Styling -->
+            <div class="word-ribbon-group">
+                <select id="wordFontFamily" class="word-ribbon-select" title="Font Family"
+                    onchange="execWordCmd('fontName', this.value)">
+                    <option value="Calibri" selected>Calibri</option>
+                    <option value="Arial">Arial</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Outfit">Outfit</option>
+                </select>
+                <select id="wordFontSize" class="word-ribbon-select" title="Font Size"
+                    onchange="execWordCmd('fontSize', this.value)">
+                    <option value="1">8 pt</option>
+                    <option value="2">10 pt</option>
+                    <option value="3" selected>12 pt</option>
+                    <option value="4">14 pt</option>
+                    <option value="5">18 pt</option>
+                    <option value="6">24 pt</option>
+                    <option value="7">36 pt</option>
+                </select>
+                
+                <button type="button" class="word-ribbon-btn" id="wordBtnBold" onclick="execWordCmd('bold')" title="Bold (Ctrl+B)">
+                    <i class="fas fa-bold"></i>
+                </button>
+                <button type="button" class="word-ribbon-btn" id="wordBtnItalic" onclick="execWordCmd('italic')" title="Italic (Ctrl+I)">
+                    <i class="fas fa-italic"></i>
+                </button>
+                <button type="button" class="word-ribbon-btn" id="wordBtnUnderline" onclick="execWordCmd('underline')" title="Underline (Ctrl+U)">
+                    <i class="fas fa-underline"></i>
+                </button>
+                <button type="button" class="word-ribbon-btn" id="wordBtnStrike" onclick="execWordCmd('strikeThrough')" title="Strikethrough">
+                    <i class="fas fa-strikethrough"></i>
+                </button>
+                
+                <!-- Font Color -->
+                <div class="word-color-picker-wrapper" title="Font Color">
+                    <i class="fas fa-font" style="border-bottom: 3px solid #e00;" id="wordFontColorIndicator"></i>
+                    <input type="color" id="wordFontColor"
+                        oninput="execWordCmd('foreColor', this.value); document.getElementById('wordFontColorIndicator').style.borderBottomColor=this.value;"
+                        value="#ff0000" class="word-color-picker-input">
+                </div>
+                
+                <!-- Highlight Color -->
+                <div class="word-color-picker-wrapper" title="Highlight Color">
+                    <i class="fas fa-paint-roller" style="border-bottom: 3px solid #ffff00;" id="wordHighlightColorIndicator"></i>
+                    <input type="color" id="wordHighlightColor"
+                        oninput="execWordCmd('hiliteColor', this.value); document.getElementById('wordHighlightColorIndicator').style.borderBottomColor=this.value;"
+                        value="#ffff00" class="word-color-picker-input">
+                </div>
+            </div>
+            
+            <div class="word-ribbon-divider"></div>
+            
+            <!-- Paragraph formatting -->
+            <div class="word-ribbon-group">
+                <button type="button" class="word-ribbon-btn" onclick="execWordCmd('justifyLeft')" title="Align Left">
+                    <i class="fas fa-align-left"></i>
+                </button>
+                <button type="button" class="word-ribbon-btn" onclick="execWordCmd('justifyCenter')" title="Align Center">
+                    <i class="fas fa-align-center"></i>
+                </button>
+                <button type="button" class="word-ribbon-btn" onclick="execWordCmd('justifyRight')" title="Align Right">
+                    <i class="fas fa-align-right"></i>
+                </button>
+                <button type="button" class="word-ribbon-btn" onclick="execWordCmd('justifyFull')" title="Justify">
+                    <i class="fas fa-align-justify"></i>
+                </button>
+                
+                <button type="button" class="word-ribbon-btn" onclick="execWordCmd('insertUnorderedList')" title="Bullet List">
+                    <i class="fas fa-list-ul"></i>
+                </button>
+                <button type="button" class="word-ribbon-btn" onclick="execWordCmd('insertOrderedList')" title="Numbered List">
+                    <i class="fas fa-list-ol"></i>
+                </button>
+            </div>
+            
+            <div class="word-ribbon-divider"></div>
+            
+            <!-- Extra Utilities: Table, Find & Replace -->
+            <div class="word-ribbon-group">
+                <button type="button" class="word-ribbon-btn" onclick="insertWordTable()" title="Insert 3x3 Table">
+                    <i class="fas fa-table"></i>
+                </button>
+                <button type="button" class="word-ribbon-btn" onclick="toggleWordFindReplace()" title="Find &amp; Replace Text">
+                    <i class="fas fa-sync-alt"></i> Find &amp; Replace
+                </button>
+            </div>
+        </div>
+        </div>
+        
+        <!-- Header Actions -->
+        <div class="word-header-right">
+            <button type="button" class="btn btn-sm btn-primary px-3 me-2 fw-bold shadow-sm" id="wordSaveBtn" style="border-radius: 6px;" onclick="saveWordDocument()">
+                <i class="fas fa-save me-1"></i> Save Changes
+            </button>
+            <button type="button" class="word-close-btn" onclick="closeWordWorkspace()" title="Close Workspace">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Find and Replace Bar (Hidden by default) -->
+    <div class="word-find-replace-bar" id="wordFindReplaceBar" style="display: none;">
+        <div class="d-flex align-items-center gap-2 px-3 py-2 border-bottom" style="background-color: var(--bg-card); border-color: var(--border-color) !important;">
+            <span class="small fw-bold text-white me-2">Find & Replace:</span>
+            <input type="text" id="wordFindInput" class="form-control form-control-sm form-dark" placeholder="Find text..." style="max-width: 200px;">
+            <input type="text" id="wordReplaceInput" class="form-control form-control-sm form-dark" placeholder="Replace with..." style="max-width: 200px;">
+            <button type="button" class="btn btn-sm btn-primary fw-bold" onmousedown="event.preventDefault()" onclick="wordFindAndReplace(false)">Replace Next</button>
+            <button type="button" class="btn btn-sm btn-secondary fw-bold" onmousedown="event.preventDefault()" onclick="wordFindAndReplace(true)">Replace All</button>
+            <button type="button" class="btn btn-sm btn-link text-white ms-auto" onclick="toggleWordFindReplace()"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+
+    <!-- Word Workspace Body -->
+    <div class="word-body">
+        <!-- Scrollable workspace for the A4 pages -->
+        <div class="word-workspace" id="wordWorkspace">
+            <div class="word-canvas" id="wordEditorCanvas" contenteditable="true" spellcheck="true"
+                onkeydown="(function(e){
+                    if(e.ctrlKey||e.metaKey){
+                        if(e.key==='b'){e.preventDefault();execWordCmd('bold');}
+                        else if(e.key==='i'){e.preventDefault();execWordCmd('italic');}
+                        else if(e.key==='u'){e.preventDefault();execWordCmd('underline');}
+                        else if(e.key==='z'){e.preventDefault();execWordCmd('undo');}
+                        else if(e.key==='y'){e.preventDefault();execWordCmd('redo');}
+                    }
+                })(event)">
+                <!-- Converted HTML will be injected here -->
+            </div>
+        </div>
+    </div>
+</div>
+

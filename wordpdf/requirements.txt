@@ -1,0 +1,17 @@
+Django>=6.0.0
+pdf2docx
+python-docx
+openpyxl
+python-pptx
+reportlab
+mysqlclient
+PyPDF2
+PyMuPDF
+Pillow
+pywin32
+htmldocx
+mammoth
+pdfplumber
+docx2pdf
+beautifulsoup4
+docxcompose

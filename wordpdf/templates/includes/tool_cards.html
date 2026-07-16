@@ -1,0 +1,233 @@
+        <!-- Grid Cards Section -->
+        <div id="cardsContainer">
+            
+            <!-- PDF Tools Section -->
+            <div class="tool-section-group" data-category="pdf">
+                <h3 class="section-header section-pdf">PDF Tools</h3>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="tool-card" id="pdf-to-word" onclick="initTool('pdf-to-word')">
+                            <span class="tool-format format-pdf">.PDF</span>
+                            <div class="tool-icon icon-pdf"><i class="fas fa-file-word"></i></div>
+                            <h4 class="tool-title">PDF to Word</h4>
+                            <p class="tool-desc">Convert PDF to editable DOCX format preserving layout.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="pdf-merge" onclick="initTool('pdf-merge')">
+                            <span class="tool-format format-pdf">.PDF</span>
+                            <div class="tool-icon icon-pdf"><i class="fas fa-object-group"></i></div>
+                            <h4 class="tool-title">PDF Merge</h4>
+                            <p class="tool-desc">Combine multiple PDF files into a single document.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="pdf-split" onclick="initTool('pdf-split')">
+                            <span class="tool-format format-pdf">.PDF</span>
+                            <div class="tool-icon icon-pdf"><i class="fas fa-scissors"></i></div>
+                            <h4 class="tool-title">PDF Split</h4>
+                            <p class="tool-desc">Split a PDF by page ranges, individual pages, or odd/even pages.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="pdf-compress" onclick="initTool('pdf-compress')">
+                            <span class="tool-format format-pdf">.PDF</span>
+                            <div class="tool-icon icon-pdf"><i class="fas fa-compress-arrows-alt"></i></div>
+                            <h4 class="tool-title">PDF Compress</h4>
+                            <p class="tool-desc">Reduce PDF file size by stripping metadata and garbage streams.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="pdf-to-excel" onclick="initTool('pdf-to-excel')">
+                            <span class="tool-format format-pdf">.PDF</span>
+                            <div class="tool-icon icon-pdf"><i class="fas fa-file-excel"></i></div>
+                            <h4 class="tool-title">PDF to Excel</h4>
+                            <p class="tool-desc">Extract tabular data from PDF files into Excel spreadsheet format.</p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="tool-card" id="pdf-edit" onclick="initTool('pdf-edit')">
+                            <span class="tool-format format-pdf">.PDF</span>
+                            <div class="tool-icon icon-pdf"><i class="fas fa-pen-nib"></i></div>
+                            <h4 class="tool-title">PDF Edit</h4>
+                            <p class="tool-desc">Add text, highlights, whiteouts and freehand drawings directly on PDF pages.</p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="tool-card" id="image-to-pdf" onclick="initTool('image-to-pdf')">
+                            <span class="tool-format format-pdf">.PNG / .JPG</span>
+                            <div class="tool-icon icon-pdf"><i class="fas fa-file-image text-warning"></i></div>
+                            <h4 class="tool-title">Image to PDF</h4>
+                            <p class="tool-desc">Convert and merge PNG, JPEG, and JPG images into a single PDF document.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Word Tools Section -->
+            <div class="tool-section-group" data-category="word">
+                <h3 class="section-header section-word">Word Tools</h3>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="tool-card" id="word-to-pdf" onclick="initTool('word-to-pdf')">
+                            <span class="tool-format format-docx">.DOCX</span>
+                            <div class="tool-icon icon-docx"><i class="fas fa-file-pdf"></i></div>
+                            <h4 class="tool-title">Word to PDF</h4>
+                            <p class="tool-desc">Convert DOCX files to clean, pixel-perfect PDF documents.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="word-merge" onclick="initTool('word-merge')">
+                            <span class="tool-format format-docx">.DOCX</span>
+                            <div class="tool-icon icon-docx"><i class="fas fa-object-group"></i></div>
+                            <h4 class="tool-title">Word Merge</h4>
+                            <p class="tool-desc">Merge multiple DOCX documents maintaining page breaks.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="word-split" onclick="initTool('word-split')">
+                            <span class="tool-format format-docx">.DOCX</span>
+                            <div class="tool-icon icon-docx"><i class="fas fa-scissors"></i></div>
+                            <h4 class="tool-title">Word Split</h4>
+                            <p class="tool-desc">Split a Word document into separate odd, even or custom page files.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="word-compress" onclick="initTool('word-compress')">
+                            <span class="tool-format format-docx">.DOCX</span>
+                            <div class="tool-icon icon-docx"><i class="fas fa-compress-arrows-alt"></i></div>
+                            <h4 class="tool-title">Word Compress</h4>
+                            <p class="tool-desc">Shrink DOCX size by downsampling and optimizing embedded media.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="word-edit" onclick="initTool('word-edit')">
+                            <span class="tool-format format-docx">.DOCX</span>
+                            <div class="tool-icon icon-docx"><i class="fas fa-pen-fancy"></i></div>
+                            <h4 class="tool-title">Word Edit</h4>
+                            <p class="tool-desc">Edit Microsoft Word documents directly in your browser with standard styling controls.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Excel Tools Section -->
+            <div class="tool-section-group" data-category="excel">
+                <h3 class="section-header section-excel">Excel Tools</h3>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="tool-card" id="excel-to-pdf" onclick="initTool('excel-to-pdf')">
+                            <span class="tool-format format-xlsx">.XLSX</span>
+                            <div class="tool-icon icon-xlsx"><i class="fas fa-file-pdf"></i></div>
+                            <h4 class="tool-title">Excel to PDF</h4>
+                            <p class="tool-desc">Convert Excel spreadsheets into high-fidelity PDF sheets.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="excel-merge" onclick="initTool('excel-merge')">
+                            <span class="tool-format format-xlsx">.XLSX</span>
+                            <div class="tool-icon icon-xlsx"><i class="fas fa-object-group"></i></div>
+                            <h4 class="tool-title">Excel Merge</h4>
+                            <p class="tool-desc">Merge multiple workbooks together combining all active sheets.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="excel-split" onclick="initTool('excel-split')">
+                            <span class="tool-format format-xlsx">.XLSX</span>
+                            <div class="tool-icon icon-xlsx"><i class="fas fa-scissors"></i></div>
+                            <h4 class="tool-title">Excel Split</h4>
+                            <p class="tool-desc">Extract Excel sheets into separate individual workbook files.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="excel-compress" onclick="initTool('excel-compress')">
+                            <span class="tool-format format-xlsx">.XLSX</span>
+                            <div class="tool-icon icon-xlsx"><i class="fas fa-compress-arrows-alt"></i></div>
+                            <h4 class="tool-title">Excel Compress</h4>
+                            <p class="tool-desc">Compress sheets and optimize media in Excel archives.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PowerPoint Tools Section -->
+            <div class="tool-section-group" data-category="powerpoint">
+                <h3 class="section-header section-powerpoint" style="border-left-color: #f97316 !important;">PowerPoint Tools</h3>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="tool-card" id="powerpoint-to-pdf" onclick="initTool('powerpoint-to-pdf')">
+                            <span class="tool-format format-pptx">.PPTX</span>
+                            <div class="tool-icon icon-pptx"><i class="fas fa-file-pdf"></i></div>
+                            <h4 class="tool-title">PowerPoint to PDF</h4>
+                            <p class="tool-desc">Convert presentation files (.pptx, .ppt) to clean, high-fidelity PDF slides.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="powerpoint-to-word" onclick="initTool('powerpoint-to-word')">
+                            <span class="tool-format format-pptx">.PPTX</span>
+                            <div class="tool-icon icon-pptx"><i class="fas fa-file-word"></i></div>
+                            <h4 class="tool-title">PowerPoint to Word</h4>
+                            <p class="tool-desc">Convert presentation slides to editable Word text blocks and layout.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="pdf-to-powerpoint" onclick="initTool('pdf-to-powerpoint')">
+                            <span class="tool-format format-pdf">.PDF</span>
+                            <div class="tool-icon icon-pptx"><i class="fas fa-file-powerpoint"></i></div>
+                            <h4 class="tool-title">PDF to PowerPoint</h4>
+                            <p class="tool-desc">Convert PDF pages into slides inside a Microsoft PowerPoint presentation.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="word-to-powerpoint" onclick="initTool('word-to-powerpoint')">
+                            <span class="tool-format format-docx">.DOCX</span>
+                            <div class="tool-icon icon-pptx"><i class="fas fa-file-powerpoint"></i></div>
+                            <h4 class="tool-title">Word to PowerPoint</h4>
+                            <p class="tool-desc">Convert structured Word heading outlines directly into PowerPoint slides.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="powerpoint-compress" onclick="initTool('powerpoint-compress')">
+                            <span class="tool-format format-pptx">.PPTX</span>
+                            <div class="tool-icon icon-pptx"><i class="fas fa-compress-arrows-alt"></i></div>
+                            <h4 class="tool-title">PowerPoint Compress</h4>
+                            <p class="tool-desc">Reduce presentation file size by optimizing embedded slide images.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image Tools Section -->
+            <div class="tool-section-group" data-category="image">
+                <h3 class="section-header section-image" style="border-left-color: #a855f7 !important;">Image Tools</h3>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="tool-card" id="jpeg-to-png" onclick="initTool('jpeg-to-png')">
+                            <span class="tool-format format-image">.JPEG</span>
+                            <div class="tool-icon icon-image"><i class="fas fa-file-image"></i></div>
+                            <h4 class="tool-title">JPEG to PNG</h4>
+                            <p class="tool-desc">Convert JPEG images to high-quality PNG format preserving details.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="png-to-jpeg" onclick="initTool('png-to-jpeg')">
+                            <span class="tool-format format-image">.PNG</span>
+                            <div class="tool-icon icon-image"><i class="fas fa-file-image"></i></div>
+                            <h4 class="tool-title">PNG to JPEG</h4>
+                            <p class="tool-desc">Convert PNG images to standard JPEG format optimizing size.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="tool-card" id="image-compress" onclick="initTool('image-compress')">
+                            <span class="tool-format format-image">.IMG</span>
+                            <div class="tool-icon icon-image"><i class="fas fa-compress-arrows-alt"></i></div>
+                            <h4 class="tool-title">Image Compress</h4>
+                            <p class="tool-desc">Compress PNG and JPEG images to reduce file size while preserving quality.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
