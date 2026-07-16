@@ -1,0 +1,208 @@
+/* General Transitions */
+.transition-all {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hover Lift */
+.hover-lift {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg) !important;
+}
+
+/* Opacity Hover */
+.hover-opacity-100 {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.message-content-box:hover .hover-opacity-100 {
+    opacity: 1 !important;
+}
+
+/* Fade In Animation */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.fade-in {
+    animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Slide In Animation */
+@keyframes slideInUp {
+    from { 
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.slide-in {
+    animation: slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Typing Indicator Animation */
+.typing-indicator-container {
+    padding: 0.5rem 0;
+}
+.typing-dot {
+    width: 6px;
+    height: 6px;
+    background-color: var(--text-muted);
+    border-radius: 50%;
+    animation: typingPulse 1.4s infinite ease-in-out both;
+}
+
+.typing-dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+.typing-dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes typingPulse {
+    0%, 80%, 100% { 
+        transform: scale(0);
+        opacity: 0.5;
+    } 
+    40% { 
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Button Ripple Effect */
+.ripple {
+    position: relative;
+    overflow: hidden;
+}
+.ripple:after {
+    content: "";
+    display: block;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+    background-repeat: no-repeat;
+    background-position: 50%;
+    transform: scale(10, 10);
+    opacity: 0;
+    transition: transform .5s, opacity 1s;
+}
+.ripple:active:after {
+    transform: scale(0, 0);
+    opacity: .3;
+    transition: 0s;
+}
+
+/* Logo Wave Animations */
+
+/* 1. Floating/swimming on waves motion for the logo image */
+@keyframes waveFloat {
+    0% {
+        transform: translateY(0) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-5px) rotate(3deg);
+    }
+    100% {
+        transform: translateY(0) rotate(0deg);
+    }
+}
+.wave-float {
+    animation: waveFloat 3s ease-in-out infinite;
+    display: inline-block;
+}
+
+/* 2. Water ripple waves pulsing outward from behind the logo */
+.wave-ripple-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wave-ripple-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid var(--primary-color);
+    opacity: 0;
+    pointer-events: none;
+    animation: waveRipple 3s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+}
+
+.wave-ripple-ring:nth-child(2) {
+    animation-delay: 1s;
+}
+
+.wave-ripple-ring:nth-child(3) {
+    animation-delay: 2s;
+}
+
+@keyframes waveRipple {
+    0% {
+        transform: scale(1);
+        opacity: 0.5;
+    }
+    100% {
+        transform: scale(2.2);
+        opacity: 0;
+    }
+}
+
+/* SVG Ocean Wave Animations */
+.waves-animation-wrapper {
+    position: relative;
+    width: 100%;
+    height: 32px;
+    overflow: hidden;
+    opacity: 0.85;
+}
+
+.waves-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 32px;
+}
+
+.parallax-waves > use {
+    animation: move-wave 12s cubic-bezier(.55,.5,.45,.5) infinite;
+}
+
+.parallax-waves > use:nth-child(1) {
+    animation-delay: -2s;
+    animation-duration: 5s;
+}
+
+.parallax-waves > use:nth-child(2) {
+    animation-delay: -3s;
+    animation-duration: 8s;
+}
+
+.parallax-waves > use:nth-child(3) {
+    animation-delay: -4s;
+    animation-duration: 11s;
+}
+
+@keyframes move-wave {
+    0% {
+        transform: translate3d(-90px, 0, 0);
+    }
+    100% {
+        transform: translate3d(85px, 0, 0);
+    }
+}
+
+

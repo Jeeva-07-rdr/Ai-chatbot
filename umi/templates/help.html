@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Help & Support — UMI{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column h-100 overflow-auto">
+    <!-- Header -->
+    {% include 'header.html' with page_title="Help Center" %}
+
+    <div class="help-container max-w-800 mx-auto w-100 px-4 py-5 slide-in">
+        
+        <!-- Page Title -->
+        <div class="mb-5 text-center">
+            <div class="avatar-circle bg-primary text-white d-flex align-items-center justify-content-center shadow-lg mx-auto mb-3" style="width: 64px; height: 64px;">
+                <i class="bi bi-question-circle" style="font-size: 2rem;"></i>
+            </div>
+            <h2 class="fw-bold mb-1" style="color: var(--text-main);">Help & Support</h2>
+            <p class="text-muted fw-normal">Find answers, learn keyboard shortcuts, and contact our team.</p>
+        </div>
+
+        <div class="d-flex flex-column gap-5">
+            
+            <!-- About UMI Section -->
+            <section id="about">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-info-circle text-primary fs-4"></i>
+                    <h4 class="fw-bold mb-0" style="color: var(--text-main);">About UMI</h4>
+                </div>
+                <div class="card border-0 p-4 rounded-xl shadow-sm" style="background: var(--card-bg); border: 1px solid var(--border-color) !important;">
+                    <p class="mb-2" style="color: var(--text-main);"><strong>UMI</strong> (User Mind Interface) is a premium, modern conversational AI companion designed to help you write clean code, design systems, debug errors, and format documents smoothly.</p>
+                    <p class="mb-0 text-muted small">Current Version: <strong>1.0.0 (Production Release)</strong></p>
+                </div>
+            </section>
+
+            <!-- Keyboard Shortcuts Section -->
+            <section id="shortcuts">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-keyboard text-primary fs-4"></i>
+                    <h4 class="fw-bold mb-0" style="color: var(--text-main);">Keyboard Shortcuts</h4>
+                </div>
+                <div class="card border-0 p-4 rounded-xl shadow-sm" style="background: var(--card-bg); border: 1px solid var(--border-color) !important;">
+                    <div class="row g-3">
+                        <div class="col-sm-6 d-flex justify-content-between border-bottom pb-2">
+                            <span class="text-muted">Send Message</span>
+                            <kbd class="bg-light text-dark px-2 py-1 small border">Enter</kbd>
+                        </div>
+                        <div class="col-sm-6 d-flex justify-content-between border-bottom pb-2">
+                            <span class="text-muted">New Line</span>
+                            <kbd class="bg-light text-dark px-2 py-1 small border">Shift + Enter</kbd>
+                        </div>
+                        <div class="col-sm-6 d-flex justify-content-between border-bottom pb-2">
+                            <span class="text-muted">Create New Chat</span>
+                            <kbd class="bg-light text-dark px-2 py-1 small border">Ctrl + N</kbd>
+                        </div>
+                        <div class="col-sm-6 d-flex justify-content-between border-bottom pb-2">
+                            <span class="text-muted">Focus Input box</span>
+                            <kbd class="bg-light text-dark px-2 py-1 small border">Escape</kbd>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- FAQ Section -->
+            <section id="faq">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-chat-square-text text-primary fs-4"></i>
+                    <h4 class="fw-bold mb-0" style="color: var(--text-main);">Frequently Asked Questions</h4>
+                </div>
+                <div class="accordion accordion-flush rounded-xl overflow-hidden shadow-sm border" id="faqAccordion" style="background: var(--card-bg); border-color: var(--border-color) !important;">
+                    <div class="accordion-item" style="background: transparent; border-color: var(--border-color);">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#faq-1" style="background: transparent; color: var(--text-main);">
+                                Is UMI's chat history persistent?
+                            </button>
+                        </h2>
+                        <div id="faq-1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted small">
+                                Yes, every conversation is saved directly into the SQL database. Conversations will remain visible in your sidebar history until you explicitly archive or delete them.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item" style="background: transparent; border-color: var(--border-color);">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#faq-2" style="background: transparent; color: var(--text-main);">
+                                Can I export my conversations?
+                            </button>
+                        </h2>
+                        <div id="faq-2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted small">
+                                Absolutely. Open any active chat, click the "export" action button inside the conversation window, and select your preferred download format (PDF, Word DOCX, Markdown, Text, or JSON).
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item" style="background: transparent; border-color: var(--border-color);">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#faq-3" style="background: transparent; color: var(--text-main);">
+                                How do AI model settings work?
+                            </button>
+                        </h2>
+                        <div id="faq-3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted small">
+                                Under Settings, you can select your AI Provider (Gemini or local Ollama), choose the specific model, customize the theme (Light/Dark/System), toggle response streaming, and clear your history.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Contact Support Section -->
+            <section id="support">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-envelope text-primary fs-4"></i>
+                    <h4 class="fw-bold mb-0" style="color: var(--text-main);">Contact Support</h4>
+                </div>
+                <div class="card border-0 p-4 rounded-xl shadow-sm" style="background: var(--card-bg); border: 1px solid var(--border-color) !important;">
+                    <form id="supportForm" onsubmit="event.preventDefault(); window.showToast('Support ticket submitted successfully!'); this.reset();">
+                        <div class="mb-3">
+                            <label class="form-label small fw-medium" style="color: var(--text-main);">Issue Category</label>
+                            <select class="form-select form-select-sm rounded-pill" required style="background: var(--card-bg); color: var(--text-main); border-color: var(--border-color);">
+                                <option value="">Select a category</option>
+                                <option value="account">Account Access</option>
+                                <option value="billing">Billing Inquiry</option>
+                                <option value="technical">Technical Bug</option>
+                                <option value="feedback">Feature Proposal</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-medium" style="color: var(--text-main);">Description</label>
+                            <textarea class="form-control form-control-sm rounded-3" rows="4" placeholder="Detail your query or issue..." required style="background: var(--card-bg); color: var(--text-main); border-color: var(--border-color);"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-sm w-100 rounded-pill fw-medium text-white" style="background: linear-gradient(135deg, #4F46E5, #6366F1); padding: 0.5rem; box-shadow: 0 4px 12px rgba(79,70,229,0.3);">
+                            Submit Support Ticket
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+<div class="chat-input-wrapper position-fixed bottom-0 start-0 w-100 p-3 pt-5 pe-md-4 pb-md-4">
+    <div class="max-w-800 mx-auto w-100">
+        <!-- File Attachment Preview Area -->
+        <div id="filePreviewArea" class="d-flex flex-wrap gap-2 px-3 py-2 border rounded-4 mb-2 shadow-sm" style="border-color: var(--border-color) !important; display: none; background-color: var(--card-bg);"></div>
+        
+        <div class="chat-input-container d-flex align-items-center rounded-5 px-3 py-2" id="chatInputContainer" style="background-color: var(--card-bg); border: 1px solid var(--border-color); box-shadow: var(--shadow-md);">
+            <!-- File Input -->
+            <input type="file" id="fileInput" multiple style="display: none;">
+            <button class="btn btn-icon text-muted hover-lift p-0 me-2 d-flex align-items-center justify-content-center" id="attachBtn" title="Attach File" style="min-width: 36px; height: 36px; border-radius: 50%;">
+                <i class="bi bi-plus-lg fs-5"></i>
+            </button>
+            
+            <!-- Textarea -->
+            <textarea class="form-control bg-transparent border-0 shadow-none py-1 mx-1" id="chatInput" rows="1" placeholder="Ask anything" aria-label="Chat input" style="resize: none; max-height: 200px; color: var(--text-main); font-size: 0.95rem;"></textarea>
+            
+            <!-- Action Buttons -->
+            <div class="d-flex align-items-center gap-1 ms-1">
+                <button class="btn btn-icon text-muted hover-lift p-0 d-flex align-items-center justify-content-center" id="micBtn" title="Microphone" style="min-width: 32px; height: 32px; border-radius: 50%;">
+                    <i class="bi bi-mic fs-5"></i>
+                </button>
+                <button class="btn btn-icon text-muted hover-lift p-0 d-none d-sm-flex align-items-center justify-content-center" id="emojiBtn" title="Emoji" style="min-width: 32px; height: 32px; border-radius: 50%;">
+                    <i class="bi bi-emoji-smile fs-5"></i>
+                </button>
+                <button class="btn send-btn rounded-circle d-flex align-items-center justify-content-center ms-2" id="sendBtn" title="Send Message" style="width: 36px; height: 36px; background-color: var(--primary-color); border: none; color: white; transition: background-color 0.2s ease;">
+                    <i class="bi bi-arrow-up-short fs-3"></i>
+                </button>
+            </div>
+        </div>
+        <div class="text-center mt-2">
+            <span class="ultra-small text-muted" style="font-size: 0.72rem; opacity: 0.8;">UMI can make mistakes. Consider verifying important information.</span>
+        </div>
+    </div>
+</div>

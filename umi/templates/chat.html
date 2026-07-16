@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}UMI - Your Intelligent AI Assistant{% endblock %}
+
+{% block extra_css %}
+<!-- Specific chat CSS can go here if needed -->
+{% endblock %}
+
+{% block content %}
+<div class="h-100 d-flex flex-column position-relative">
+    
+    <!-- Header -->
+    {% include 'header.html' with page_title=page_title active_chat=active_chat %}
+
+    <!-- Welcome Screen -->
+    <div id="welcome-screen" class="flex-grow-1 {% if active_chat %}d-none{% else %}d-flex{% endif %} flex-column align-items-center justify-content-center text-center p-4 fade-in" style="margin-bottom: 80px;">
+        <h2 class="fw-semibold mb-4" style="color: var(--text-main); font-size: 2.25rem; letter-spacing: -0.03em;">
+            What's on the agenda today?
+        </h2>
+    </div>
+
+    <!-- Active Chat Container (Hidden by default) -->
+    <div id="chat-container" class="flex-grow-1 {% if active_chat %}d-flex{% else %}d-none{% endif %} flex-column overflow-hidden position-relative fade-in">
+        <div class="chat-messages flex-grow-1 overflow-auto p-4 pb-5 max-w-800 mx-auto w-100" id="chatMessages">
+            
+            {% for msg in chat_messages %}
+                {% if msg.sender == 'user' %}
+                    {% include 'components/message.html' with content=msg.content is_user=True time=msg.created_at|date:"H:i" message_id=msg.id %}
+                {% else %}
+                    {% include 'components/message.html' with content=msg.rendered_content is_user=False time=msg.created_at|date:"H:i" message_id=msg.id %}
+                {% endif %}
+            {% endfor %}
+
+            <!-- Typing Indicator -->
+            <div id="typingIndicator" class="typing-indicator-container d-none slide-in mb-4 w-100">
+                <div class="d-flex align-items-start">
+                    <div class="message-avatar me-3 flex-shrink-0 mt-1">
+                        <div class="avatar-circle ai-avatar d-flex align-items-center justify-content-center shadow-sm" style="border: none; background-color: transparent;">
+                            <img src="{% static 'images/logo.png' %}?v=1.2" alt="UMI" class="wave-float" style="width: 28px; height: 28px; object-fit: contain;">
+                        </div>
+                    </div>
+                    <div class="ai-card d-inline-flex align-items-center p-3 rounded-lg shadow-sm">
+                        <div class="typing-dot me-1"></div>
+                        <div class="typing-dot me-1"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="height: 100px;"></div> <!-- Spacer for input -->
+        </div>
+    </div>
+
+    <!-- Chat Input Area -->
+    {% include 'components/chat_input.html' %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/chat.js' %}?v=1.3"></script>
+{% endblock %}

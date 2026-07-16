@@ -1,0 +1,16 @@
+{% load static %}
+<div class="message-wrapper d-flex w-100 slide-in typing-indicator-container d-none" id="typingIndicator">
+    <div class="message-avatar me-3 flex-shrink-0 mt-1">
+        <div class="avatar-circle bg-primary text-white d-flex align-items-center justify-content-center border shadow-sm">
+            <img src="{% static 'images/logo.png' %}" alt="UMI" class="w-75 h-75 object-fit-contain img-fluid filter-white">
+        </div>
+    </div>
+    
+    <div class="message-content-box d-flex flex-column max-w-75">
+        <div class="message-bubble p-3 rounded-4 shadow-sm bg-white text-dark ai-bubble border d-flex align-items-center gap-1">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        </div>
+    </div>
+</div>
