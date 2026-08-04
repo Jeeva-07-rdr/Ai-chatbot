@@ -15,12 +15,214 @@ from django.utils import timezone
 from django.template.loader import render_to_string
 from django.core.cache import cache
 
-from .models import UserSettings, Conversation, Message, PinnedConversation, Attachment
-from .forms import UserProfileForm, UserSettingsForm
+from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.db import transaction
+
+from .models import UserSettings, UserProfile, Conversation, Message, Attachment
+from .forms import (
+    LoginForm, RegisterForm, ForgotPasswordForm, ResetPasswordForm,
+    UserProfileForm, UserSettingsForm
+)
 from . import services
 from . import ai_service
 
 logger = logging.getLogger('umi')
+
+
+# --- Enterprise Authentication Views ---
+
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('chat')
+
+    next_url = request.GET.get('next', '')
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            user = form.cleaned_data['user']
+            login(request, user)
+            
+            # Session Expiration based on Remember Me
+            if form.cleaned_data.get('remember_me'):
+                request.session.set_expiry(2592000)  # 30 days
+            else:
+                request.session.set_expiry(0)  # Browser close
+                
+            logger.info(f"AUTH | Login successful | User: {user.username}")
+            messages.success(request, f"Welcome back, {user.first_name or user.username}!")
+            
+            if next_url:
+                return redirect(next_url)
+            return redirect('chat')
+    else:
+        form = LoginForm()
+
+    return render(request, 'login.html', {'form': form, 'next_url': next_url})
+
+
+def register_view(request):
+    if request.user.is_authenticated:
+        return redirect('chat')
+
+    if request.method == 'POST':
+        form = RegisterForm(request.POST, request.FILES)
+        if form.is_valid():
+            with transaction.atomic():
+                user = form.save(commit=False)
+                user.set_password(form.cleaned_data['password'])
+                user.save()
+
+                # Create UserProfile
+                UserProfile.objects.create(user=user)
+
+                # Create UserSettings & process profile pic
+                user_settings = UserSettings.objects.create(user=user)
+                if request.FILES.get('profile_pic'):
+                    optimized = services.optimize_profile_picture(request.FILES['profile_pic'])
+                    user_settings.profile_pic = optimized
+                    user_settings.save()
+
+            login(request, user)
+            logger.info(f"AUTH | Account registered & logged in | User: {user.username}")
+            messages.success(request, f"Account created successfully! Welcome to UMI, {user.username}.")
+            return redirect('chat')
+    else:
+        form = RegisterForm()
+
+    return render(request, 'register.html', {'form': form})
+
+
+def forgot_password_view(request):
+    if request.user.is_authenticated:
+        return redirect('chat')
+
+    if request.method == 'POST':
+        form = ForgotPasswordForm(request.POST)
+        if form.is_valid():
+            identifier = form.cleaned_data['email'].strip()
+            
+            # Rate limiting check (max 3 requests per 15 mins per IP/email)
+            client_ip = request.META.get('REMOTE_ADDR', 'unknown')
+            rate_key = f"pwd_reset_rate_{client_ip}_{identifier}"
+            request_count = cache.get(rate_key, 0)
+            
+            if request_count >= 3:
+                logger.warning(f"AUTH | Rate limit exceeded for password reset request | Input: {identifier} | IP: {client_ip}")
+                messages.error(request, "Too many password reset requests. Please wait 15 minutes before trying again.")
+                return render(request, 'forgot_password.html', {'form': form})
+                
+            cache.set(rate_key, request_count + 1, 900)  # 15 minutes
+            
+            # Search for user by email address OR username
+            user = User.objects.filter(Q(email__iexact=identifier) | Q(username__iexact=identifier)).first()
+            if user and user.email:
+                # Create token & send email
+                reset_token_obj = services.create_password_reset_token(user)
+                services.send_password_reset_email(user, reset_token_obj, request)
+                logger.info(f"AUTH | Password reset link issued for user: {user.username} ({user.email})")
+                from chat.repositories import AnalyticsRepository
+                AnalyticsRepository.log_runtime('INFO', f"Password reset requested for {user.email} (User: {user.username})")
+            else:
+                logger.info(f"AUTH | Password reset requested for non-registered input: {identifier}")
+                from chat.repositories import AnalyticsRepository
+                AnalyticsRepository.log_runtime('WARNING', f"Password reset attempt for non-registered input: {identifier}")
+
+            # Anti-enumeration response (same message regardless of existence)
+            messages.info(request, "If an account matching this email or username exists, a password reset link has been sent to the registered email address.")
+            return render(request, 'forgot_password.html', {'form': ForgotPasswordForm()})
+    else:
+        form = ForgotPasswordForm()
+
+    return render(request, 'forgot_password.html', {'form': form})
+
+
+def reset_password_view(request, token):
+    from chat.models import PasswordResetToken
+    from chat.repositories import AnalyticsRepository
+
+    reset_token_obj = PasswordResetToken.objects.filter(token=token).first()
+
+    if not reset_token_obj or not reset_token_obj.is_valid():
+        logger.warning(f"AUTH | Invalid or expired password reset token attempt: {token[:12] if token else 'None'}...")
+        AnalyticsRepository.log_runtime('WARNING', f"Invalid or expired password reset token attempt: {token[:12] if token else 'None'}...")
+        messages.error(request, "This password reset link is invalid, has expired, or has already been used. Please request a new link.")
+        return redirect('forgot_password')
+
+    user = reset_token_obj.user
+
+    if request.method == 'POST':
+        form = ResetPasswordForm(request.POST)
+        if form.is_valid():
+            with transaction.atomic():
+                # Set new password securely using Django PBKDF2 hashing
+                user.set_password(form.cleaned_data['new_password'])
+                user.save()
+
+                # Mark token as used
+                reset_token_obj.is_used = True
+                reset_token_obj.save()
+
+                # Invalidate all existing login sessions for user
+                try:
+                    from django.contrib.sessions.models import Session
+                    for session in Session.objects.all():
+                        try:
+                            session_data = session.get_decoded()
+                            if session_data.get('_auth_user_id') == str(user.id):
+                                session.delete()
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+            logger.info(f"AUTH | Password reset successfully completed for user: {user.username}")
+            AnalyticsRepository.log_runtime('INFO', f"Password reset successfully completed for user: {user.username}")
+            messages.success(request, "Your password has been reset successfully! Please sign in with your new password.")
+            return redirect('login')
+    else:
+        form = ResetPasswordForm()
+
+    return render(request, 'reset_password.html', {'form': form, 'token': token, 'valid_user': user.username})
+
+
+def logout_view(request):
+    username = request.user.username if request.user.is_authenticated else 'Anonymous'
+    user_id = request.user.id if request.user.is_authenticated else None
+    
+    if user_id:
+        invalidate_sidebar_cache(user_id)
+
+    logout(request)
+    request.session.flush()
+    logger.info(f"AUTH | User logged out & session flushed | User: {username}")
+    
+    response = redirect('login')
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
+
+
+def remove_avatar_view(request):
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
+    user_settings, _ = UserSettings.objects.get_or_create(user=user)
+    
+    if user_settings.profile_pic:
+        try:
+            if os.path.exists(user_settings.profile_pic.path):
+                os.remove(user_settings.profile_pic.path)
+        except Exception as e:
+            logger.warning(f"Avatar file remove error: {e}")
+        user_settings.profile_pic = None
+        user_settings.save()
+        logger.info(f"DB | Avatar removed for user: {user.username}")
+        messages.success(request, "Profile picture removed.")
+
+    invalidate_sidebar_cache(user.id)
+    return redirect('settings')
 
 
 def get_dev_user(request):
@@ -131,13 +333,13 @@ def get_sidebar_context(user):
     if cached_data is not None:
         return cached_data
 
-    # Fetch pinned conversations directly in one query using the relation to avoid N+1
+    # Fetch pinned conversations directly in one query
     pinned_chats = list(Conversation.objects.filter(
         user=user,
         is_deleted=False,
         is_archived=False,
-        pinned_relationship__user=user
-    ).order_by('pinned_relationship__sort_order'))
+        is_pinned=True
+    ).order_by('-updated_at'))
 
     # Fetch unpinned conversations, selecting only the columns needed for rendering
     unpinned_chats = Conversation.objects.filter(
@@ -180,7 +382,7 @@ def get_sidebar_context(user):
 
 
 def chat_view(request):
-    user = get_dev_user(request)
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
     sidebar_ctx = get_sidebar_context(user)
     user_settings, _ = UserSettings.objects.get_or_create(user=user)
     
@@ -193,8 +395,12 @@ def chat_view(request):
 
 
 def chat_detail_view(request, chat_id):
-    user = get_dev_user(request)
-    conversation = get_object_or_404(Conversation, id=chat_id, user=user, is_deleted=False)
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
+    try:
+        conversation = Conversation.objects.get(id=chat_id, user=user, is_deleted=False)
+    except (Conversation.DoesNotExist, Exception):
+        logger.warning(f"DB | Chat not found or deleted | ID: {chat_id} | User: {user.username}")
+        return redirect('chat')
     
     sidebar_ctx = get_sidebar_context(user)
     user_settings, _ = UserSettings.objects.get_or_create(user=user)
@@ -223,7 +429,7 @@ def chat_detail_view(request, chat_id):
 
 
 def new_chat(request):
-    user = get_dev_user(request)
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
     conversation = Conversation.objects.create(user=user, title="New Chat")
     logger.info(f"DB | Conversation created | ID: {conversation.id} | User: {user.username}")
     return redirect('chat_detail', chat_id=conversation.id)
@@ -235,9 +441,15 @@ def new_chat(request):
 def send_message(request, chat_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid request method'}, status=400)
-        
-    user = get_dev_user(request)
+
+    from .performance_tracer import PerformanceTracer
+    tracer = PerformanceTracer("Chat Send Message")
+    
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
+    tracer.mark('Authentication')
+    
     conversation = get_object_or_404(Conversation, id=chat_id, user=user)
+    tracer.mark('Conversation Retrieval')
     
     data = json.loads(request.body)
     content = data.get('content', '').strip()
@@ -264,42 +476,31 @@ def send_message(request, chat_id):
     else:
         # Save User message
         user_msg = Message.objects.create(conversation=conversation, sender='user', content=content)
+    
+    tracer.mark('Database Update')
         
-    user_settings_temp, _ = UserSettings.objects.get_or_create(user=user)
-    logger.info(
-        f"CHAT | Message sent\n"
-        f"  Conversation: #{conversation.id}\n"
-        f"  User: {user.username} (ID: {user.id})\n"
-        f"  Provider: {user_settings_temp.ai_provider}\n"
-        f"  Model: {user_settings_temp.ai_model}\n"
-        f"  Message: {content[:100]}{'...' if len(content) > 100 else ''}\n"
-        f"  Attachments: {len(attachment_ids)}"
-    )
-        
-    # Link attachments to user message
+    # Link any newly uploaded attachments to user message and conversation
     if attachment_ids:
         attachments = Attachment.objects.filter(id__in=attachment_ids)
         attachments.update(message=user_msg, conversation=conversation)
-        logger.debug(f"CHAT | Linked {len(attachment_ids)} attachment(s) to message {user_msg.id}")
+        logger.info(f"DB | Linked {len(attachment_ids)} attachment(s) to conversation {conversation.id}")
         
-    # Update title if it is "New Chat" and this is the first message
-    if conversation.title == "New Chat":
-        conversation.title = content[:30] + ('...' if len(content) > 30 else '')
-        conversation.save()
-        logger.info(f"DB | Chat auto-renamed to: '{conversation.title}' | Conversation: {conversation.id}")
+    user_settings_temp, _ = UserSettings.objects.get_or_create(user=user)
+    tracer.mark('Session Lookup')
         
-    user_settings, _ = UserSettings.objects.get_or_create(user=user)
-    
-    # Process files
+    # Process files / Knowledge retrieval
     files_context = ""
     multimodal_parts = []
     
-    for attachment in user_msg.attachments.all():
+    # Retrieve all attachments for this conversation (including past and newly attached)
+    all_attachments = Attachment.objects.filter(conversation=conversation)
+        
+    for attachment in all_attachments:
         file_path = attachment.file.path
         file_name = attachment.file_name
         file_type = attachment.file_type
         
-        if file_type.startswith('image/') and user_settings.ai_provider == 'gemini':
+        if file_type.startswith('image/') and user_settings_temp.ai_provider == 'gemini':
             try:
                 with open(file_path, 'rb') as f:
                     img_bytes = f.read()
@@ -310,23 +511,28 @@ def send_message(request, chat_id):
             except Exception as e:
                 files_context += f"\n[Error loading image {file_name}: {e}]\n"
         else:
-            # Parse text from PDFs, DOCX, CSV, Excel, TXT (cached to prevent repeated I/O)
+            # Parse text from PDFs, DOCX, CSV, Excel, TXT, Code files (cached to prevent repeated I/O)
             att_cache_key = f"attachment_text_{attachment.id}"
             parsed_text = cache.get(att_cache_key)
-            if parsed_text is None:
+            if parsed_text is not None:
+                tracer.record_cache_hit()
+            else:
+                tracer.record_cache_miss()
                 parsed_text = services.extract_text_from_file(file_path, file_name)
                 cache.set(att_cache_key, parsed_text, 86400 * 7) # Cache for 7 days
             if parsed_text:
-                files_context += f"\n\n--- Start of File: {file_name} ---\n{parsed_text}\n--- End of File: {file_name} ---\n"
+                from .rag_service import RAGService
+                retrieved = RAGService.retrieve_context(content, parsed_text, file_name)
+                files_context += f"\n\n{retrieved}\n\n"
                 
+    tracer.mark('Knowledge Retrieval')
+    
     prompt_content = content
-    if files_context:
-        prompt_content = (
-            f"The following parsed file content is attached to the user's message. "
-            f"Read the file content carefully and answer the user's prompt based on the file content:\n"
-            f"{files_context}\n\n"
-            f"User's Question/Prompt: {content}"
-        )
+    if files_context.strip():
+        from .rag_service import RAGService
+        prompt_content = RAGService.build_rag_prompt(content, files_context.strip())
+        
+    tracer.mark('Prompt Construction')
         
     # Fetch last 10 chronological messages (excluding current message) to optimize context length
     past_messages = list(conversation.messages.filter(id__lt=user_msg.id).order_by('-created_at')[:10])
@@ -337,10 +543,13 @@ def send_message(request, chat_id):
     summary_cache_key = f"conv_summary_{conversation.id}"
     summary = cache.get(summary_cache_key)
     if summary:
+        tracer.record_cache_hit()
         history.append({
             'role': 'system',
             'content': f"Summary of older conversation history: {summary}"
         })
+    else:
+        tracer.record_cache_miss()
         
     for msg in past_messages:
         history.append({
@@ -348,8 +557,25 @@ def send_message(request, chat_id):
             'content': msg.content
         })
         
-    # Determine system prompt dynamically based on the user's response style settings
-    system_prompt = ai_service.get_system_prompt_for_style(user_settings.response_style)
+    tracer.mark('Conversation Compression')
+    tracer.mark('Memory Retrieval')
+        
+    user_settings = user_settings_temp
+    system_prompt = ai_service.get_system_prompt_for_style(
+        user_settings.response_style,
+        user_settings.ai_provider,
+        user_settings.ai_model
+    )
+    
+    tracer.mark('Provider Selection')
+    tracer.mark('Cache Lookup')
+    
+    # Calculate estimated tokens safely
+    prompt_words = (
+        len((prompt_content or '').split()) +
+        len((system_prompt or '').split()) +
+        sum(len((m.get('content') or '').split()) for m in history)
+    )
     
     if user_settings.streaming:
         # Streaming response pipeline
@@ -359,9 +585,9 @@ def send_message(request, chat_id):
         
         def event_stream_generator():
             accumulated_text = ""
+            first_token_received = False
             start_time = time.time()
-            
-            logger.info(f"AI | Streaming request started | Provider: {user_settings.ai_provider} | Model: {user_settings.ai_model}")
+            tracer.mark('Send Request To AI')
             
             # Send metadata (model name and title)
             yield f"data: {json.dumps({'type': 'meta', 'chat_title': conversation.title, 'provider': user_settings.ai_provider, 'model': user_settings.ai_model})}\n\n"
@@ -376,14 +602,19 @@ def send_message(request, chat_id):
                     multimodal_parts=multimodal_parts,
                     response_style=user_settings.response_style
                 ):
+                    if not first_token_received and chunk:
+                        first_token_received = True
+                        tracer.mark('Time To First Token')
                     accumulated_text += chunk
                     yield f"data: {json.dumps({'type': 'chunk', 'content': chunk})}\n\n"
             except GeneratorExit:
-                # Client closed stream early (e.g. Stop Generating clicked)
                 logger.warning(f"AI | Stream aborted by user | Conversation: {conversation.id}")
                 pass
                 
             duration = round(time.time() - start_time, 2)
+            tracer.mark('Generation Time')
+            tracer.mark('Streaming Time')
+            
             if not accumulated_text.strip():
                 accumulated_text = "No response was generated or generation was canceled."
                 logger.warning(f"AI | Empty response generated | Conversation: {conversation.id} | Duration: {duration}s")
@@ -400,16 +631,7 @@ def send_message(request, chat_id):
                 content=accumulated_text
             )
             conversation.save() # Touch
-            
-            logger.success(
-                f"AI | Response complete\n"
-                f"  Provider: {user_settings.ai_provider}\n"
-                f"  Model: {user_settings.ai_model}\n"
-                f"  Duration: {duration}s\n"
-                f"  Characters: {len(accumulated_text)}\n"
-                f"  Conversation: #{conversation.id}"
-            )
-            logger.debug(f"DB | AI message saved | ID: {ai_msg.id} | Conversation: {conversation.id}")
+            tracer.mark('Database Update')
             
             rendered_reply = services.render_markdown_to_html(ai_msg.content)
             ai_html = render_to_string('components/message.html', {
@@ -419,6 +641,14 @@ def send_message(request, chat_id):
             })
             
             yield f"data: {json.dumps({'type': 'done', 'ai_html': ai_html, 'duration': duration, 'message_id': ai_msg.id, 'user_message_id': user_msg.id})}\n\n"
+            
+            tracer.mark('Response Complete')
+            
+            # Record token metrics
+            output_words = len(accumulated_text.split())
+            tracer.set_tokens(int(prompt_words * 1.3), int(output_words * 1.3))
+            tracer.add_api_time(duration)
+            tracer.generate_report()
             
             # Trigger background summarizer for older context
             run_async_summarizer(conversation.id, user_settings.ai_provider, user_settings.ai_model)
@@ -505,7 +735,7 @@ def send_message(request, chat_id):
 def rename_chat(request, chat_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid method'}, status=400)
-    user = get_dev_user(request)
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
     conversation = get_object_or_404(Conversation, id=chat_id, user=user)
     
     data = json.loads(request.body)
@@ -521,35 +751,28 @@ def rename_chat(request, chat_id):
 
 
 def delete_chat(request, chat_id):
-    user = get_dev_user(request)
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
     conversation = get_object_or_404(Conversation, id=chat_id, user=user)
     conversation.is_deleted = True
     conversation.save()
     
-    # Remove pinned relationship if exists
-    PinnedConversation.objects.filter(user=user, conversation=conversation).delete()
-    
     logger.info(f"DB | Chat deleted | ID: {conversation.id} | Title: '{conversation.title}' | User: {user.username}")
     invalidate_sidebar_cache(user.id)
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'json' in request.headers.get('Accept', ''):
+        return JsonResponse({'success': True, 'chat_id': str(chat_id)})
     return redirect('chat')
 
 
 def pin_chat(request, chat_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid method'}, status=400)
-    user = get_dev_user(request)
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
     conversation = get_object_or_404(Conversation, id=chat_id, user=user)
     
     conversation.is_pinned = not conversation.is_pinned
     conversation.save()
     
-    if conversation.is_pinned:
-        # Append to pinned relation list
-        max_order = PinnedConversation.objects.filter(user=user).count()
-        PinnedConversation.objects.get_or_create(user=user, conversation=conversation, defaults={'sort_order': max_order})
-    else:
-        PinnedConversation.objects.filter(user=user, conversation=conversation).delete()
-        
     invalidate_sidebar_cache(user.id)
     return JsonResponse({'success': True, 'is_pinned': conversation.is_pinned})
 
@@ -557,7 +780,7 @@ def pin_chat(request, chat_id):
 def archive_chat(request, chat_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid method'}, status=400)
-    user = get_dev_user(request)
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
     conversation = get_object_or_404(Conversation, id=chat_id, user=user)
     
     conversation.is_archived = not conversation.is_archived
@@ -570,7 +793,7 @@ def archive_chat(request, chat_id):
 def duplicate_chat(request, chat_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid method'}, status=400)
-    user = get_dev_user(request)
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
     src_chat = get_object_or_404(Conversation, id=chat_id, user=user)
     
     # Clone conversation
@@ -596,24 +819,13 @@ def duplicate_chat(request, chat_id):
 def reorder_pins(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid method'}, status=400)
-    user = get_dev_user(request)
-    data = json.loads(request.body)
-    chat_ids = data.get('chat_ids', [])
-    
-    for index, cid in enumerate(chat_ids):
-        try:
-            pinned = PinnedConversation.objects.get(user=user, conversation_id=cid)
-            pinned.sort_order = index
-            pinned.save()
-        except PinnedConversation.DoesNotExist:
-            pass
-            
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
     invalidate_sidebar_cache(user.id)
     return JsonResponse({'success': True})
 
 
 def search_chats(request):
-    user = get_dev_user(request)
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
     query = request.GET.get('q', '').strip()
     
     if not query:
@@ -667,8 +879,8 @@ def search_chats(request):
 
 
 def export_chat(request, chat_id, format_type):
-    user = get_dev_user(request)
-    conversation = get_object_or_454(Conversation, id=chat_id, user=user)
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
+    conversation = get_object_or_404(Conversation, id=chat_id, user=user)
     
     if format_type == 'json':
         response_data = services.export_conversation_to_json(conversation)
@@ -676,7 +888,7 @@ def export_chat(request, chat_id, format_type):
         response['Content-Disposition'] = f'attachment; filename="chat_{conversation.id}.json"'
         return response
         
-    elif format_type == 'markdown':
+    elif format_type in ('markdown', 'md'):
         response_data = services.export_conversation_to_markdown(conversation)
         response = HttpResponse(response_data, content_type='text/markdown')
         response['Content-Disposition'] = f'attachment; filename="chat_{conversation.id}.md"'
@@ -710,7 +922,7 @@ def export_chat(request, chat_id, format_type):
 
 
 def settings_view(request):
-    user = get_dev_user(request)
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
     user_settings, _ = UserSettings.objects.get_or_create(user=user)
     sidebar_ctx = get_sidebar_context(user)
     
@@ -730,14 +942,23 @@ def settings_view(request):
 def save_profile(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid method'}, status=400)
-    user = get_dev_user(request)
-    form = UserProfileForm(request.POST, instance=user)
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
+    user_settings, _ = UserSettings.objects.get_or_create(user=user)
     
+    form = UserProfileForm(request.POST, instance=user)
     if form.is_valid():
         form.save()
+        
+        # Handle profile picture upload from profile form if provided
+        if request.FILES.get('profile_pic'):
+            optimized = services.optimize_profile_picture(request.FILES['profile_pic'])
+            user_settings.profile_pic = optimized
+            user_settings.save()
+            
         logger.info(f"DB | Profile updated | User: {user.username} (ID: {user.id})")
-        messages.success(request, "Profile updated successfully.")
-        return JsonResponse({'success': True, 'message': 'Profile details saved.'})
+        messages.success(request, "Profile details updated successfully.")
+        invalidate_sidebar_cache(user.id)
+        return JsonResponse({'success': True, 'message': 'Profile details saved successfully.'})
     else:
         errors = {field: errors[0] for field, errors in form.errors.items()}
         logger.warning(f"DB | Profile update failed | User: {user.username} | Errors: {errors}")
@@ -747,7 +968,7 @@ def save_profile(request):
 def save_preferences(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid method'}, status=400)
-    user = get_dev_user(request)
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
     user_settings, _ = UserSettings.objects.get_or_create(user=user)
     
     form = UserSettingsForm(request.POST, request.FILES, instance=user_settings)
@@ -768,27 +989,60 @@ def save_preferences(request):
 def delete_account(request):
     if request.method != 'POST':
         return redirect('settings')
-    user = get_dev_user(request)
-    logger.warning(f"AUTH | Account deleted | User: {user.username} (ID: {user.id})")
-    user.delete()
+
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
+    password = request.POST.get('password', '')
+
+    if not user.check_password(password):
+        messages.error(request, "Account deletion failed: Incorrect password provided.")
+        logger.warning(f"AUTH | Failed account deletion attempt (wrong password) | User: {user.username}")
+        return redirect('settings')
+
+    username = user.username
+    user_id = user.id
+
+    with transaction.atomic():
+        # Delete user files from disk
+        attachments = Attachment.objects.filter(user=user)
+        for att in attachments:
+            try:
+                if att.file and os.path.exists(att.file.path):
+                    os.remove(att.file.path)
+            except Exception as e:
+                logger.warning(f"File delete cleanup error: {e}")
+        
+        user_settings = getattr(user, 'settings', None)
+        if user_settings and user_settings.profile_pic:
+            try:
+                if os.path.exists(user_settings.profile_pic.path):
+                    os.remove(user_settings.profile_pic.path)
+            except Exception as e:
+                logger.warning(f"Profile pic cleanup error: {e}")
+
+        # Delete database records
+        user.conversations.all().delete()
+        user.delete()
+
     logout(request)
-    return redirect('/')
+    request.session.flush()
+    logger.warning(f"AUTH | Account completely deleted from database | User: {username} (ID: {user_id})")
+    messages.info(request, "Your UMI account and all stored data have been permanently deleted.")
+    return redirect('login')
 
 
 def clear_history(request):
     if request.method != 'POST':
         return redirect('settings')
-    user = get_dev_user(request)
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
     count = Conversation.objects.filter(user=user, is_deleted=False).count()
     Conversation.objects.filter(user=user).update(is_deleted=True)
-    PinnedConversation.objects.filter(user=user).delete()
     logger.info(f"DB | Chat history cleared | {count} conversation(s) deleted | User: {user.username}")
     invalidate_sidebar_cache(user.id)
     return redirect('chat')
 
 
 def help_view(request):
-    user = get_dev_user(request)
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
     user_settings, _ = UserSettings.objects.get_or_create(user=user)
     sidebar_ctx = get_sidebar_context(user)
     
@@ -934,15 +1188,20 @@ def upload_file(request):
         return JsonResponse({'error': 'Invalid request method'}, status=400)
         
     upload_start = time.time()
-    user = get_dev_user(request)
+    user = request.user if request.user.is_authenticated else get_dev_user(request)
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
         logger.warning(f"UPLOAD | No file provided | User: {user.username}")
         return JsonResponse({'error': 'No file was uploaded'}, status=400)
         
-    # Allowed file extensions
+    # Allowed file extensions (including Documents, Images, Markdown, and Code files)
     import os
-    allowed_exts = ['.pdf', '.docx', '.txt', '.csv', '.xlsx', '.xls', '.pptx', '.png', '.jpg', '.jpeg', '.webp']
+    allowed_exts = [
+        '.pdf', '.docx', '.txt', '.csv', '.xlsx', '.xls', '.pptx',
+        '.png', '.jpg', '.jpeg', '.webp',
+        '.md', '.markdown', '.py', '.js', '.json', '.html', '.css',
+        '.c', '.cpp', '.java', '.go', '.rs', '.sql', '.sh', '.xml', '.yaml', '.yml'
+    ]
     ext = os.path.splitext(uploaded_file.name)[1].lower()
     
     if ext not in allowed_exts:
@@ -951,6 +1210,7 @@ def upload_file(request):
         
     try:
         attachment = Attachment.objects.create(
+            user=user,
             file=uploaded_file,
             file_name=uploaded_file.name,
             file_size=uploaded_file.size,

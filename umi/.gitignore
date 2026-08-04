@@ -170,3 +170,9 @@ Desktop.ini
 # Project-specific logs
 logs/
 *.log
+
+# Node modules
+node_modules/
+**/node_modules/
+
+

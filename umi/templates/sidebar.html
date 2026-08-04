@@ -1,46 +1,45 @@
 {% load static %}
 <aside class="sidebar d-flex flex-column" id="sidebar">
-    <div class="sidebar-header p-3 pb-2 d-flex align-items-center justify-content-between border-bottom">
-        <a href="{% url 'chat' %}" class="text-decoration-none d-flex align-items-center gap-2 logo-container text-primary">
-            <div class="wave-ripple-container" style="width: 32px; height: 32px;">
-                <div class="wave-ripple-ring"></div>
-                <div class="wave-ripple-ring"></div>
-                <div class="wave-ripple-ring"></div>
-                <img src="{% static 'images/logo.png' %}?v=1.2" alt="UMI Logo" class="logo-img wave-float" style="width: 28px; height: 28px; position: relative; z-index: 1;">
-            </div>
-            <span class="fs-4 fw-bold">UMI</span>
+    <!-- Header -->
+    <div class="sidebar-header p-3 pb-3 d-flex align-items-center justify-content-between">
+        <a href="{% url 'chat' %}" class="text-decoration-none d-flex align-items-center gap-2">
+            <img src="{% static 'images/logo.png' %}?v=2.0" alt="UMI Logo" class="logo-img wave-float" style="width: 28px; height: 28px; object-fit: contain;">
+            <span class="fs-4 fw-bold text-white">UMI</span>
         </a>
-        <button class="btn btn-link d-md-none text-muted p-1" id="closeSidebar">
-            <i class="bi bi-x-lg fs-5"></i>
+        <button class="btn btn-link text-white opacity-75 p-1 hover-opacity-100" id="closeSidebar" title="Collapse Sidebar">
+            <i class="bi bi-layout-sidebar-reverse fs-5"></i>
         </button>
     </div>
 
+    <!-- New Chat Button -->
     <div class="p-3 pb-2">
-        <button class="btn w-100 rounded-pill d-flex align-items-center justify-content-center gap-2 new-chat-btn ripple">
-            <i class="bi bi-plus-lg fs-5"></i> <span class="fw-medium">New Chat</span>
-        </button>
+        <a href="{% url 'new_chat' %}" class="btn w-100 py-2 d-flex align-items-center justify-content-center gap-2 new-chat-btn ripple text-decoration-none">
+            <i class="bi bi-plus-lg fs-5 text-white"></i> <span class="fw-medium text-white">New Chat</span>
+        </a>
     </div>
 
-    <div class="px-3 pb-3 border-bottom">
-        <div class="input-group rounded-pill overflow-hidden border">
-            <span class="input-group-text bg-transparent border-0 pe-1"><i class="bi bi-search text-muted"></i></span>
-            <input type="text" id="sidebarSearch" class="form-control bg-transparent border-0 shadow-none text-xs" placeholder="Search chats...">
+    <!-- Search Box -->
+    <div class="px-3 pb-3">
+        <div class="input-group sidebar-search-box overflow-hidden">
+            <span class="input-group-text bg-transparent border-0 pe-1 text-white opacity-75"><i class="bi bi-search"></i></span>
+            <input type="text" id="sidebarSearch" class="form-control bg-transparent border-0 shadow-none text-xs text-white sidebar-search-input" placeholder="Search chats...">
         </div>
     </div>
 
-    <div class="sidebar-content flex-grow-1 overflow-auto px-2 py-3" id="sidebarContent">
+    <!-- Sidebar Scrollable Content -->
+    <div class="sidebar-content flex-grow-1 overflow-auto px-3 py-2" id="sidebarContent">
         <!-- Pinned Chats -->
         <div class="chat-group mb-4 {% if not pinned_chats %}d-none{% endif %}" id="pinnedGroup">
-            <h6 class="text-muted text-xs fw-semibold px-2 mb-2 text-uppercase tracking-wider">Pinned</h6>
+            <h6 class="chat-group-title mb-2">Pinned</h6>
             <div class="pinned-list" id="pinnedList">
                 {% for chat in pinned_chats %}
-                <div class="chat-item-wrapper d-flex align-items-center mb-1 rounded position-relative {% if active_chat.id == chat.id %}bg-light{% endif %}" draggable="true" data-id="{{ chat.id }}">
-                    <a href="{% url 'chat_detail' chat.id %}" class="chat-link flex-grow-1 d-flex align-items-center text-decoration-none text-dark py-2 px-2 {% if active_chat.id == chat.id %}active-chat bg-transparent{% endif %}">
-                        <i class="bi bi-pin-angle-fill me-2 text-primary fs-6"></i>
-                        <span class="text-truncate chat-title-text">{{ chat.title }}</span>
+                <div class="chat-item-wrapper d-flex align-items-center mb-1 rounded position-relative {% if active_chat.id == chat.id %}active-chat-item{% endif %}" draggable="true" data-id="{{ chat.id }}">
+                    <a href="{% url 'chat_detail' chat.id %}" class="chat-link flex-grow-1 d-flex align-items-center text-decoration-none py-2 px-2 {% if active_chat.id == chat.id %}active-chat{% endif %}">
+                        <i class="bi bi-pin-angle-fill me-2 fs-6 text-white"></i>
+                        <span class="text-truncate chat-title-text text-white">{{ chat.title }}</span>
                     </a>
                     <div class="dropdown me-2">
-                        <button class="btn btn-link p-0 text-muted opacity-50 hover-opacity-100" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation();">
+                        <button class="btn btn-link p-0 text-white opacity-75 hover-opacity-100" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation();">
                             <i class="bi bi-three-dots"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-1" style="font-size: 0.8rem; background-color: var(--card-bg);">
@@ -59,15 +58,15 @@
 
         <!-- Today -->
         <div class="chat-group mb-4 {% if not today_chats %}d-none{% endif %}">
-            <h6 class="text-muted text-xs fw-semibold px-2 mb-2 text-uppercase tracking-wider">Today</h6>
+            <h6 class="chat-group-title mb-2">Today</h6>
             {% for chat in today_chats %}
-            <div class="chat-item-wrapper d-flex align-items-center mb-1 rounded position-relative {% if active_chat.id == chat.id %}bg-light{% endif %}">
-                <a href="{% url 'chat_detail' chat.id %}" class="chat-link flex-grow-1 d-flex align-items-center text-decoration-none text-dark py-2 px-2 {% if active_chat.id == chat.id %}active-chat bg-transparent{% endif %}">
-                    <i class="bi bi-chat-left-text me-2 fs-6"></i>
-                    <span class="text-truncate chat-title-text">{{ chat.title }}</span>
+            <div class="chat-item-wrapper d-flex align-items-center mb-1 rounded position-relative {% if active_chat.id == chat.id %}active-chat-item{% endif %}">
+                <a href="{% url 'chat_detail' chat.id %}" class="chat-link flex-grow-1 d-flex align-items-center text-decoration-none py-2 px-2 {% if active_chat.id == chat.id %}active-chat{% endif %}">
+                    <i class="bi bi-chat-left-text me-2 fs-6 opacity-75 text-white"></i>
+                    <span class="text-truncate chat-title-text text-white">{{ chat.title }}</span>
                 </a>
                 <div class="dropdown me-2">
-                    <button class="btn btn-link p-0 text-muted opacity-50 hover-opacity-100" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation();">
+                    <button class="btn btn-link p-0 text-white opacity-75 hover-opacity-100" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation();">
                         <i class="bi bi-three-dots"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-1" style="font-size: 0.8rem; background-color: var(--card-bg);">
@@ -85,15 +84,15 @@
 
         <!-- Yesterday -->
         <div class="chat-group mb-4 {% if not yesterday_chats %}d-none{% endif %}">
-            <h6 class="text-muted text-xs fw-semibold px-2 mb-2 text-uppercase tracking-wider">Yesterday</h6>
+            <h6 class="chat-group-title mb-2">Yesterday</h6>
             {% for chat in yesterday_chats %}
-            <div class="chat-item-wrapper d-flex align-items-center mb-1 rounded position-relative {% if active_chat.id == chat.id %}bg-light{% endif %}">
-                <a href="{% url 'chat_detail' chat.id %}" class="chat-link flex-grow-1 d-flex align-items-center text-decoration-none text-dark py-2 px-2 {% if active_chat.id == chat.id %}active-chat bg-transparent{% endif %}">
-                    <i class="bi bi-chat-left-text me-2 fs-6"></i>
-                    <span class="text-truncate chat-title-text">{{ chat.title }}</span>
+            <div class="chat-item-wrapper d-flex align-items-center mb-1 rounded position-relative {% if active_chat.id == chat.id %}active-chat-item{% endif %}">
+                <a href="{% url 'chat_detail' chat.id %}" class="chat-link flex-grow-1 d-flex align-items-center text-decoration-none py-2 px-2 {% if active_chat.id == chat.id %}active-chat{% endif %}">
+                    <i class="bi bi-chat-left-text me-2 fs-6 opacity-75 text-white"></i>
+                    <span class="text-truncate chat-title-text text-white">{{ chat.title }}</span>
                 </a>
                 <div class="dropdown me-2">
-                    <button class="btn btn-link p-0 text-muted opacity-50 hover-opacity-100" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation();">
+                    <button class="btn btn-link p-0 text-white opacity-75 hover-opacity-100" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation();">
                         <i class="bi bi-three-dots"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-1" style="font-size: 0.8rem; background-color: var(--card-bg);">
@@ -111,15 +110,15 @@
 
         <!-- Last 7 Days & Older -->
         <div class="chat-group mb-4 {% if not seven_days_chats %}d-none{% endif %}">
-            <h6 class="text-muted text-xs fw-semibold px-2 mb-2 text-uppercase tracking-wider">Previous 7 Days</h6>
+            <h6 class="chat-group-title mb-2">Last 7 Days</h6>
             {% for chat in seven_days_chats %}
-            <div class="chat-item-wrapper d-flex align-items-center mb-1 rounded position-relative {% if active_chat.id == chat.id %}bg-light{% endif %}">
-                <a href="{% url 'chat_detail' chat.id %}" class="chat-link flex-grow-1 d-flex align-items-center text-decoration-none text-dark py-2 px-2 {% if active_chat.id == chat.id %}active-chat bg-transparent{% endif %}">
-                    <i class="bi bi-chat-left-text me-2 fs-6"></i>
-                    <span class="text-truncate chat-title-text">{{ chat.title }}</span>
+            <div class="chat-item-wrapper d-flex align-items-center mb-1 rounded position-relative {% if active_chat.id == chat.id %}active-chat-item{% endif %}">
+                <a href="{% url 'chat_detail' chat.id %}" class="chat-link flex-grow-1 d-flex align-items-center text-decoration-none py-2 px-2 {% if active_chat.id == chat.id %}active-chat{% endif %}">
+                    <i class="bi bi-chat-left-text me-2 fs-6 opacity-75 text-white"></i>
+                    <span class="text-truncate chat-title-text text-white">{{ chat.title }}</span>
                 </a>
                 <div class="dropdown me-2">
-                    <button class="btn btn-link p-0 text-muted opacity-50 hover-opacity-100" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation();">
+                    <button class="btn btn-link p-0 text-white opacity-75 hover-opacity-100" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation();">
                         <i class="bi bi-three-dots"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-1" style="font-size: 0.8rem; background-color: var(--card-bg);">
@@ -136,15 +135,15 @@
         </div>
 
         <div class="chat-group mb-4 {% if not older_chats %}d-none{% endif %}">
-            <h6 class="text-muted text-xs fw-semibold px-2 mb-2 text-uppercase tracking-wider">Older</h6>
+            <h6 class="chat-group-title mb-2">Older</h6>
             {% for chat in older_chats %}
-            <div class="chat-item-wrapper d-flex align-items-center mb-1 rounded position-relative {% if active_chat.id == chat.id %}bg-light{% endif %}">
-                <a href="{% url 'chat_detail' chat.id %}" class="chat-link flex-grow-1 d-flex align-items-center text-decoration-none text-dark py-2 px-2 {% if active_chat.id == chat.id %}active-chat bg-transparent{% endif %}">
-                    <i class="bi bi-chat-left-text me-2 fs-6"></i>
-                    <span class="text-truncate chat-title-text">{{ chat.title }}</span>
+            <div class="chat-item-wrapper d-flex align-items-center mb-1 rounded position-relative {% if active_chat.id == chat.id %}active-chat-item{% endif %}">
+                <a href="{% url 'chat_detail' chat.id %}" class="chat-link flex-grow-1 d-flex align-items-center text-decoration-none py-2 px-2 {% if active_chat.id == chat.id %}active-chat{% endif %}">
+                    <i class="bi bi-chat-left-text me-2 fs-6 opacity-75 text-white"></i>
+                    <span class="text-truncate chat-title-text text-white">{{ chat.title }}</span>
                 </a>
                 <div class="dropdown me-2">
-                    <button class="btn btn-link p-0 text-muted opacity-50 hover-opacity-100" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation();">
+                    <button class="btn btn-link p-0 text-white opacity-75 hover-opacity-100" data-bs-toggle="dropdown" aria-expanded="false" onclick="event.stopPropagation();">
                         <i class="bi bi-three-dots"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-1" style="font-size: 0.8rem; background-color: var(--card-bg);">
@@ -161,25 +160,38 @@
         </div>
     </div>
 
-    <div class="sidebar-footer p-3 border-top mt-auto">
-        <a href="{% url 'settings' %}" class="d-flex align-items-center p-2 rounded text-decoration-none chat-link mb-1">
-            <i class="bi bi-gear me-2 fs-5"></i> <span class="fw-medium">Settings</span>
+    <!-- Footer Settings, Help & Profile -->
+    <div class="sidebar-footer p-3 mt-auto">
+        <a href="{% url 'settings' %}" class="d-flex align-items-center p-2 text-decoration-none chat-link mb-1 text-white">
+            <i class="bi bi-gear me-2 fs-5 text-white"></i> <span class="fw-medium text-white">Settings</span>
         </a>
-        <a href="{% url 'help' %}" class="d-flex align-items-center p-2 rounded text-decoration-none chat-link mb-3">
-            <i class="bi bi-question-circle me-2 fs-5"></i> <span class="fw-medium">Help</span>
+        <a href="{% url 'help' %}" class="d-flex align-items-center p-2 text-decoration-none chat-link mb-3 text-white">
+            <i class="bi bi-question-circle me-2 fs-5 text-white"></i> <span class="fw-medium text-white">Help</span>
         </a>
         
+        <!-- User Profile Translucent Card -->
         <div class="dropdown">
-            <a href="#" class="d-flex align-items-center p-2 rounded-3 text-decoration-none chat-link w-100 user-profile-link dropdown-toggle border" data-bs-toggle="dropdown" style="background: var(--card-bg);">
-                <div class="avatar-circle bg-primary text-white d-flex align-items-center justify-content-center me-2 text-xs shadow-none">JD</div>
-                <div class="flex-grow-1 text-truncate text-start text-dark" data-bs-theme="dark">
-                    <div class="fw-semibold text-xs" style="color: var(--text-main);">John Doe</div>
-                    <div class="text-muted ultra-small">Free Plan</div>
+            <a href="#" class="d-flex align-items-center p-2 text-decoration-none user-profile-card w-100" data-bs-toggle="dropdown">
+                <div class="avatar-circle user-avatar-blue d-flex align-items-center justify-content-center me-2 text-xs" style="overflow: hidden;">
+                    {% if user.settings.profile_pic %}
+                        <img src="{{ user.settings.profile_pic.url }}" alt="{{ user.username }}" class="w-100 h-100 object-fit-cover">
+                    {% else %}
+                        {% if user.first_name and user.last_name %}
+                            {{ user.first_name|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}
+                        {% else %}
+                            {{ user.username|slice:":2"|upper }}
+                        {% endif %}
+                    {% endif %}
                 </div>
+                <div class="flex-grow-1 text-truncate text-start">
+                    <div class="fw-semibold text-xs text-white">{% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.username }}{% endif %}</div>
+                    <div class="ultra-small text-truncate" style="color: rgba(255,255,255,0.75);">{{ user.email }}</div>
+                </div>
+                <i class="bi bi-chevron-down text-white opacity-75 ms-auto" style="font-size: 0.75rem;"></i>
             </a>
             <ul class="dropdown-menu shadow-lg w-100 border-0 rounded-3 mb-2" style="background-color: var(--card-bg);">
-                <li><a class="dropdown-item py-2 d-flex align-items-center" href="{% url 'settings' %}"><i class="bi bi-person me-2 text-muted"></i>Profile</a></li>
-                <li><a class="dropdown-item py-2 d-flex align-items-center" href="{% url 'settings' %}"><i class="bi bi-star me-2 text-warning"></i>Settings</a></li>
+                <li><a class="dropdown-item py-2 d-flex align-items-center" href="{% url 'settings' %}#profile"><i class="bi bi-person me-2 text-muted"></i>Profile</a></li>
+                <li><a class="dropdown-item py-2 d-flex align-items-center" href="{% url 'settings' %}"><i class="bi bi-gear me-2 text-muted"></i>Settings</a></li>
                 <li><hr class="dropdown-divider opacity-25"></li>
                 <li><a class="dropdown-item py-2 d-flex align-items-center text-danger" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Log out</a></li>
             </ul>

@@ -2,6 +2,13 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Auth URLs
+    path('login/', views.login_view, name='login'),
+    path('register/', views.register_view, name='register'),
+    path('logout/', views.logout_view, name='logout'),
+    path('forgot-password/', views.forgot_password_view, name='forgot_password'),
+    path('reset-password/<str:token>/', views.reset_password_view, name='reset_password'),
+
     # Chat URLs
     path('', views.chat_view, name='chat'),
     path('chat/new/', views.new_chat, name='new_chat'),
@@ -20,6 +27,7 @@ urlpatterns = [
     # Settings & Profile
     path('settings/', views.settings_view, name='settings'),
     path('settings/profile/save/', views.save_profile, name='save_profile'),
+    path('settings/profile/avatar/remove/', views.remove_avatar_view, name='remove_avatar'),
     path('settings/preferences/save/', views.save_preferences, name='save_preferences'),
     path('settings/models/', views.get_available_models, name='get_available_models'),
     path('settings/delete-account/', views.delete_account, name='delete_account'),
@@ -28,7 +36,4 @@ urlpatterns = [
     # Help & Notifications
     path('help/', views.help_view, name='help'),
     path('notifications/poll/', views.poll_notifications, name='poll_notifications'),
-    
-    # Auth
-    path('logout/', views.logout_view, name='logout'),
 ]

@@ -65,55 +65,94 @@ def get_ollama_models():
     return []
 
 
-def get_system_prompt_for_style(style):
+def get_system_prompt_for_style(style, provider='gemini', model=''):
     """
-    Returns an optimized system prompt customized for the selected response style.
-    Instructs the model on output formatting, detailed explanations, lists, tables,
-    and coding/educational step-by-step styles.
+    Returns an optimized system prompt tailored for the selected response style,
+    AI provider, and model architecture.
     """
-    base_instructions = (
-        "You are UMI, a premium, highly intelligent, professional, and helpful AI assistant. "
-        "Your communication style is clear, expert-grade, polite, and authoritative. "
-        "You always identify yourself as UMI.\n\n"
-        
-        "Formatting Guidelines:\n"
-        "- Use markdown headings (# Main Heading, ## Subheading) to organize sections.\n"
-        "- Use bullet points for lists and numbered lists for steps or processes.\n"
-        "- Use tables when organizing structured data comparisons.\n"
-        "- Use bold text for key terms and concepts.\n"
-        "- Include practical examples and real-world applications whenever explaining concepts.\n\n"
-        
-        "Educational Explanations:\n"
-        "- Explain concepts starting from a clear beginner level, then build up to advanced concepts step by step. Do not assume prior knowledge.\n\n"
-        
-        "Programming & Technical Requests:\n"
-        "- If code is discussed, always include: a clear explanation, standard syntax, a practical example, a line-by-line explanation of the code, common mistakes, best practices, alternative approaches, and a real-world use case.\n"
-        "- Enclose all code blocks in proper fenced markdown syntax with language tags.\n\n"
-        
-        "Behavioral Constraints:\n"
-        "- Avoid conversational filler, repetitive prefixes, or self-referential disclaimers (e.g. do NOT say 'As an AI...').\n"
-        "- Never give extremely short one-line replies unless the user explicitly asks for a summary, brief response, or yes/no answer."
+    model_lower = (model or '').lower()
+    is_reasoning_model = 'deepseek-r1' in model_lower
+    is_small_model = any(m in model_lower for m in ['0.5b', '1b', '3.2', '7b'])
+
+    # 1. Persona & Identity
+    role = (
+        "You are UMI, an intelligent, polite, expert-grade, and professional AI chat assistant. "
+        "Always identify yourself as UMI.\n\n"
     )
-    
+
+    # 2. Capability Boundaries
+    capabilities = (
+        "Capabilities & Boundaries:\n"
+        "- You do NOT have live web browsing, real-time internet access, or external tool execution.\n"
+        "- Never claim to have performed real-time web searches or accessed live data unless explicit text is provided in attached files.\n\n"
+    )
+
+    # 3. Ambiguity & Clarification Guidelines
+    ambiguity_guidelines = (
+        "Handling Ambiguous Queries:\n"
+        "- If a user query is unclear, incomplete, or ambiguous, ask a concise clarifying question or clearly state your working assumptions before answering.\n"
+        "- Avoid guessing wild interpretations without explaining your reasoning.\n\n"
+    )
+
+    # 4. Output Formatting Rules
+    formatting = (
+        "Formatting Guidelines:\n"
+        "- Use Markdown formatting: bold key terms, bullet points for lists, and clean tables for comparative data.\n"
+        "- Enclose all code snippets in fenced code blocks with appropriate language tags.\n"
+        "- Avoid conversational filler, repetitive intro/outro prefixes, or self-referential disclaimers (e.g. do NOT say 'As an AI...').\n\n"
+    )
+
+    # 5. Response Style Instructions
     if style == 'short':
-        return (
-            base_instructions +
-            "\nStyle Constraint (Short): Keep responses highly concise and straight-to-the-point, while maintaining UMI's professional formatting."
+        style_instruction = (
+            "Response Style (SHORT):\n"
+            "- Be highly concise, direct, and to the point.\n"
+            "- Keep answers within 1-2 short paragraphs or brief bullet points.\n"
+            "- Omit lengthy introductions, theoretical history, or unnecessary fluff."
         )
     elif style == 'detailed':
-        return (
-            base_instructions +
-            "\nStyle Constraint (Detailed): Provide extremely thorough explanations, explore background context in detail, and discuss multiple perspectives, pros/cons, and comprehensive scenarios."
+        style_instruction = (
+            "Response Style (DETAILED):\n"
+            "- Provide a comprehensive, in-depth explanation with full background context.\n"
+            "- Discuss multiple perspectives, pros and cons, and step-by-step methodologies.\n"
+            "- For coding requests, provide clear syntax explanations, practical examples, and common pitfalls."
         )
     elif style == 'research':
-        return (
-            base_instructions +
-            "\nStyle Constraint (Research): Provide exhaustive, academic-grade analysis. Cover extensive history, theoretical foundations, detailed step-by-step methodologies, pros and cons, multiple alternative approaches, and deep technical details."
+        style_instruction = (
+            "Response Style (RESEARCH):\n"
+            "- Deliver an exhaustive, academic-grade technical analysis.\n"
+            "- Cover theoretical foundations, detailed step-by-step methodologies, edge cases, trade-offs, and structured comparative data."
         )
-    else: # Balanced
+    else:  # 'balanced'
+        style_instruction = (
+            "Response Style (BALANCED):\n"
+            "- Deliver a well-structured, informative, and easy-to-read answer with moderate detail.\n"
+            "- Use headings and bullet points effectively."
+        )
+
+    # For DeepSeek-R1 reasoning models, keep system prompt streamlined so internal reasoning isn't distorted
+    if is_reasoning_model:
         return (
-            base_instructions +
-            "\nStyle Constraint (Balanced): Deliver well-structured, informative, and naturally structured answers that are comprehensive yet easy to read."
+            "You are UMI, a helpful AI assistant. Always identify as UMI.\n"
+            "Be honest about capabilities (no live web search). "
+            "If user input is unclear, ask a brief clarifying question.\n\n"
+            + style_instruction
+        )
+    elif is_small_model and provider == 'ollama':
+        return (
+            role
+            + capabilities
+            + ambiguity_guidelines
+            + formatting
+            + style_instruction
+        )
+    else:
+        return (
+            role
+            + capabilities
+            + ambiguity_guidelines
+            + formatting
+            + style_instruction
         )
 
 
@@ -122,12 +161,27 @@ def stream_ai_response(provider, model, prompt, history, system_prompt=None, mul
     Generator function that yields chunks of text generated by the selected AI model.
     """
     limits = {
-        'short': 250,
-        'balanced': 1500,
-        'detailed': 3000,
-        'research': 4000
+        'short': 150,
+        'balanced': 400,
+        'detailed': 1200,
+        'research': 2500
     }
-    max_tokens = limits.get(response_style, 1500)
+    max_tokens = limits.get(response_style, 400)
+
+    # Configure model-specific temperature and top_p for response quality
+    model_name = (model or '').lower()
+    if 'deepseek-r1' in model_name:
+        temperature = 0.6
+        top_p = 0.95
+    elif 'qwen' in model_name:
+        temperature = 0.7
+        top_p = 0.8
+    elif 'gemma' in model_name or 'llama' in model_name:
+        temperature = 0.7
+        top_p = 0.9
+    else:
+        temperature = 0.7
+        top_p = 0.95
 
     if provider == 'gemini':
         # Load fresh variables on request to avoid caching issues with running Django dev server instances
@@ -179,9 +233,11 @@ def stream_ai_response(provider, model, prompt, history, system_prompt=None, mul
             client = get_gemini_client(api_key)
             config = types.GenerateContentConfig(
                 system_instruction=system_prompt if system_prompt else None,
-                max_output_tokens=max_tokens
+                max_output_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p
             )
-            logger.info(f"GEMINI | Request sent | Model: {gemini_model} | max_output_tokens: {max_tokens}")
+            logger.info(f"GEMINI | Request sent | Model: {gemini_model} | max_output_tokens: {max_tokens} | temp: {temperature} | top_p: {top_p}")
             gen_start = time.time()
             response = client.models.generate_content_stream(
                 model=gemini_model,
@@ -225,30 +281,27 @@ def stream_ai_response(provider, model, prompt, history, system_prompt=None, mul
                 'content': msg['content']
             })
             
-        # Append latest prompt with UMI persona reminder
-        prompt_with_reminder = (
-            f"[System Instruction: You are UMI. You must refer to yourself as UMI. "
-            f"Do not mention Qwen or Alibaba. Respond as UMI.]\n\n"
-            f"User: {prompt}"
-        )
         messages.append({
             'role': 'user',
-            'content': prompt_with_reminder
+            'content': prompt
         })
         
         ollama_model = model if model else 'qwen2.5:0.5b'
+        num_ctx = 8192 if multimodal_parts else 4096
         payload = {
             'model': ollama_model,
             'messages': messages,
             'stream': True,
-            'keep_alive': '5m',  # Keep model loaded in VRAM for 5 minutes of inactivity
+            'keep_alive': '10m',  # Keep model loaded in memory for 10 minutes of inactivity
             'options': {
-                'num_ctx': 16384,  # Support up to 16k tokens for analyzing files
-                'num_predict': max_tokens  # Maps to Ollama max output tokens
+                'num_ctx': num_ctx,  # Fast 4k context window (8k for files) for quick CPU initialization
+                'num_predict': max_tokens,  # Maps to Ollama max output tokens
+                'temperature': temperature,
+                'top_p': top_p
             }
         }
         
-        logger.info(f"OLLAMA | Request sent | Model: {ollama_model} | Context: 16384 tokens | keep_alive: 5m | num_predict: {max_tokens}")
+        logger.info(f"OLLAMA | Request sent | Model: {ollama_model} | Context: {num_ctx} tokens | keep_alive: 10m | num_predict: {max_tokens} | temp: {temperature} | top_p: {top_p}")
         gen_start = time.time()
         
         try:

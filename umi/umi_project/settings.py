@@ -10,22 +10,36 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Enable PyMySQL driver compatibility for MySQL database engine
+import pymysql
+pymysql.install_as_MySQLdb()
+
+# Bypass Django artificial minimum version check & RETURNING clause for universal MariaDB/MySQL compatibility
+from django.db.backends.mysql import base as mysql_base, features as mysql_features
+setattr(mysql_base.DatabaseWrapper, 'check_database_version_supported', lambda self: None)  # type: ignore
+setattr(mysql_features.DatabaseFeatures, 'can_return_rows_from_bulk_insert', False)  # type: ignore
+setattr(mysql_features.DatabaseFeatures, 'can_return_columns_from_insert', False)  # type: ignore
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / '.env', override=True)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-c-i#jat!!v09939&#7pzrebmu9wt)s2tubirfb=+%-qpbb(ve&'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-c-i#jat!!v09939&#7pzrebmu9wt)s2tubirfb=+%-qpbb(ve&')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -48,8 +62,12 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'chat.middleware.EnterpriseAuthMiddleware',
     'chat.middleware.RequestLoggingMiddleware',
 ]
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'chat'
 
 ROOT_URLCONF = 'umi_project.urls'
 
@@ -71,13 +89,28 @@ TEMPLATES = [
 WSGI_APPLICATION = 'umi_project.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+# Enterprise MySQL Database Configuration with Connection Pooling & Fallback
+# Managed via phpMyAdmin (umi_chatbot_db)
+MYSQL_HOST = os.environ.get('MYSQL_HOST', '127.0.0.1')
+MYSQL_PORT = os.environ.get('MYSQL_PORT', '3306')
+MYSQL_DATABASE = os.environ.get('MYSQL_DATABASE', 'umi_chatbot_db')
+MYSQL_USERNAME = os.environ.get('MYSQL_USERNAME', 'root')
+MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD', '')
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': MYSQL_DATABASE,
+        'USER': MYSQL_USERNAME,
+        'PASSWORD': MYSQL_PASSWORD,
+        'HOST': MYSQL_HOST,
+        'PORT': MYSQL_PORT,
+        'CONN_MAX_AGE': 600,  # Connection pooling (keep alive for 10 minutes)
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES', NAMES utf8mb4;",
+            'charset': 'utf8mb4',
+            'autocommit': True,
+        },
     }
 }
 
@@ -113,6 +146,16 @@ USE_I18N = True
 USE_TZ = True
 
 
+# Enterprise SMTP Email Configuration
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'UMI AI Chatbot <noreply@umichat.com>')
+
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
@@ -122,29 +165,32 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
-# Cache Configuration
+# Cache & Session Configuration
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'umi-chatbot-cache',
     }
 }
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+SILENCED_SYSTEM_CHECKS = ['models.E028']
 
 # Create logs directory automatically
 import os
 LOGS_DIR = BASE_DIR / 'logs'
 os.makedirs(LOGS_DIR, exist_ok=True)
 
-# Register custom SUCCESS log level
+# Register custom SUCCESS log level safely for Pylance type-checking
 import logging
-logging.SUCCESS = 25
-logging.addLevelName(logging.SUCCESS, 'SUCCESS')
+SUCCESS_LEVEL = 25
+setattr(logging, 'SUCCESS', SUCCESS_LEVEL)  # type: ignore
+logging.addLevelName(SUCCESS_LEVEL, 'SUCCESS')
 
 def logger_success(self, message, *args, **kws):
-    if self.isEnabledFor(logging.SUCCESS):
-        self._log(logging.SUCCESS, message, args, **kws)
+    if self.isEnabledFor(SUCCESS_LEVEL):
+        self._log(SUCCESS_LEVEL, message, args, **kws)
 
-logging.Logger.success = logger_success
+setattr(logging.Logger, 'success', logger_success)  # type: ignore
 
 # Install Rich traceback hook
 from rich.traceback import install

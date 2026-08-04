@@ -20,10 +20,10 @@
     <!-- Highlight.js Theme (dark) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="highlight-theme">
 
-    <!-- Custom CSS -->
-    <link href="{% static 'css/style.css' %}" rel="stylesheet">
-    <link href="{% static 'css/animations.css' %}" rel="stylesheet">
-    <link href="{% static 'css/responsive.css' %}" rel="stylesheet">
+    <!-- Custom CSS with Cache-Busting Parameters -->
+    <link href="{% static 'css/style.css' %}?v=8.0" rel="stylesheet">
+    <link href="{% static 'css/animations.css' %}?v=8.0" rel="stylesheet">
+    <link href="{% static 'css/responsive.css' %}?v=8.0" rel="stylesheet">
     
     <!-- Marked.js for Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -48,7 +48,7 @@
 
     <!-- Toast Container -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
-        <div id="dummyToast" class="toast align-items-center text-white border-0 rounded-3" role="alert" style="background: linear-gradient(135deg, #4F46E5, #6366F1); box-shadow: 0 8px 24px rgba(79,70,229,0.35);">
+        <div id="dummyToast" class="toast align-items-center text-white border-0 rounded-3" role="alert" style="background: linear-gradient(135deg, #007aff, #0052cc); box-shadow: 0 8px 24px rgba(0,122,255,0.35);">
             <div class="d-flex">
                 <div class="toast-body fw-medium" id="dummyToastBody">Action performed!</div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
@@ -59,10 +59,10 @@
     <!-- Bootstrap Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- Custom JS (order matters) -->
-    <script src="{% static 'js/theme.js' %}?v=1.3"></script>
-    <script src="{% static 'js/ui.js' %}?v=1.3"></script>
-    <script src="{% static 'js/sidebar.js' %}?v=1.3"></script>
+    <!-- Custom JS with Cache-Busting Parameters -->
+    <script src="{% static 'js/theme.js' %}?v=3.5"></script>
+    <script src="{% static 'js/ui.js' %}?v=3.5"></script>
+    <script src="{% static 'js/sidebar.js' %}?v=3.5"></script>
     
     {% block extra_js %}{% endblock %}
 </body>

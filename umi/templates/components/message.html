@@ -2,15 +2,18 @@
 <div class="message-wrapper d-flex w-100 {% if is_user %}justify-content-end{% else %}justify-content-start{% endif %} slide-in mb-4" {% if message_id %}data-message-id="{{ message_id }}"{% endif %}>
     
     {% if not is_user %}
-    <div class="message-avatar me-3 flex-shrink-0 mt-1">
-        <div class="avatar-circle ai-avatar d-flex align-items-center justify-content-center shadow-sm hover-lift" style="border: none; background-color: transparent;">
-            <img src="{% static 'images/logo.png' %}?v=1.2" alt="UMI" class="wave-float" style="width: 28px; height: 28px; object-fit: contain;">
+    <!-- AI Avatar with original logo.png & UMI label -->
+    <div class="message-avatar me-3 flex-shrink-0 mt-1 d-flex flex-column align-items-center">
+        <div class="avatar-circle ai-avatar d-flex align-items-center justify-content-center shadow-sm" style="border: none; background-color: transparent;">
+            <img src="{% static 'images/logo.png' %}?v=2.0" alt="UMI" class="wave-float" style="width: 28px; height: 28px; object-fit: contain;">
         </div>
+        <span class="ultra-small fw-semibold mt-1" style="color: var(--text-muted); font-size: 0.65rem;">UMI</span>
     </div>
     {% endif %}
     
     <div class="message-content-box d-flex flex-column {% if is_user %}align-items-end{% else %}align-items-start w-100{% endif %} max-w-75">
         
+        <!-- Message Card / Bubble -->
         <div class="message-bubble {% if is_user %}user-bubble{% else %}ai-card w-100{% endif %}">
             <div class="message-text markdown-body" data-raw-content="{{ content|escape }}">
                 {% if is_user %}
@@ -19,28 +22,35 @@
                     {{ content|safe }}
                 {% endif %}
             </div>
+
+            {% if not is_user %}
+            <!-- AI Action Footer inside Card -->
+            <div class="ai-action-bar d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-1">
+                    <button class="ai-action-btn copy-msg-btn" title="Copy text"><i class="bi bi-files"></i></button>
+                    <button class="ai-action-btn like-msg-btn" title="Good response"><i class="bi bi-hand-thumbs-up"></i></button>
+                    <button class="ai-action-btn dislike-msg-btn" title="Bad response"><i class="bi bi-hand-thumbs-down"></i></button>
+                </div>
+            </div>
+            {% endif %}
         </div>
         
-        <div class="message-meta mt-2 d-flex align-items-center gap-2 text-muted ultra-small {% if is_user %}flex-row-reverse{% endif %}">
+        <!-- Message Metadata -->
+        <div class="message-meta mt-1 d-flex align-items-center gap-1 text-muted ultra-small {% if is_user %}flex-row-reverse{% endif %}">
             {% if is_user %}
-            <span class="timestamp opacity-75">{{ time }}</span>
-            <button class="btn btn-sm btn-icon text-muted p-0 me-2 hover-lift edit-message-btn" title="Edit" style="width: 20px; height: 20px;"><i class="bi bi-pencil text-xs"></i></button>
-            {% else %}
-            <span class="timestamp fw-medium">{{ time }}</span>
-            <div class="message-actions d-flex gap-1 opacity-0 hover-opacity-100 transition-all ms-2">
-                <button class="btn btn-sm btn-icon text-muted p-0 me-1 hover-lift" title="Copy"><i class="bi bi-clipboard"></i></button>
-                <button class="btn btn-sm btn-icon text-muted p-0 me-1 hover-lift" title="Regenerate"><i class="bi bi-arrow-clockwise"></i></button>
-                <button class="btn btn-sm btn-icon text-muted p-0 me-1 hover-lift" title="Like"><i class="bi bi-hand-thumbs-up"></i></button>
-                <button class="btn btn-sm btn-icon text-muted p-0 hover-lift" title="Dislike"><i class="bi bi-hand-thumbs-down"></i></button>
-            </div>
+            <span class="timestamp opacity-75" style="font-size: 0.72rem;">{{ time }}</span>
+            <!-- Double checkmark icon -->
+            <i class="bi bi-check2-all text-primary opacity-90" style="font-size: 0.85rem;" title="Delivered"></i>
+            <button class="btn btn-sm btn-icon text-muted p-0 me-1 hover-lift edit-message-btn" title="Edit message" style="width: 18px; height: 18px;"><i class="bi bi-pencil text-xs"></i></button>
             {% endif %}
         </div>
         
     </div>
 
     {% if is_user %}
+    <!-- User Avatar Circle -->
     <div class="message-avatar ms-3 flex-shrink-0 mt-1">
-        <div class="avatar-circle bg-primary text-white d-flex align-items-center justify-content-center shadow-sm hover-lift">
+        <div class="avatar-circle user-avatar-blue d-flex align-items-center justify-content-center shadow-sm">
             JD
         </div>
     </div>

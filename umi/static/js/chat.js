@@ -165,21 +165,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Send flow with support for editMessageId
     function handleSendMessageFlow(text, editMessageId = null) {
-        const isNewChat = !chatContainer || chatContainer.classList.contains('d-none');
-        
-        if (isNewChat) {
+        // Extract chat UUID from URL path e.g. /chat/3938840c-c016-4533-8d64-daf776ef85a3/
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        let chatUUID = null;
+        if (pathParts.length >= 2 && pathParts[0] === 'chat' && pathParts[1] !== 'new') {
+            chatUUID = pathParts[1];
+        }
+
+        if (!chatUUID) {
+            sessionStorage.setItem('pending_message', text);
             fetch('/chat/new/', { method: 'GET' })
             .then(response => {
-                if (response.redirected) {
-                    sessionStorage.setItem('pending_message', text);
+                if (response.redirected || response.url) {
                     window.location.href = response.url;
+                } else {
+                    window.location.href = '/chat/new/';
                 }
+            })
+            .catch(err => {
+                console.error('[UMI] New chat redirect failed:', err);
+                window.location.href = '/chat/new/';
             });
             return;
         }
 
-        const chatUUID = window.location.pathname.split('/')[2];
-        if (!chatUUID) return;
+        // Ensure welcome screen is hidden and chat container is visible
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const chatContainer = document.getElementById('chat-container');
+        if (welcomeScreen) {
+            welcomeScreen.classList.add('d-none');
+            welcomeScreen.classList.remove('d-flex');
+        }
+        if (chatContainer) {
+            chatContainer.classList.remove('d-none');
+            chatContainer.classList.add('d-flex');
+        }
 
         setGeneratingState(true);
         console.log(`[UMI] Sending message... (edit: ${editMessageId || 'no'})`);
@@ -223,17 +243,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const placeholderId = 'streaming-ai-' + Date.now();
         const aiPlaceholderHTML = `
         <div class="message-wrapper d-flex w-100 justify-content-start slide-in mb-4" id="${placeholderId}">
-            <div class="message-avatar me-3 flex-shrink-0 mt-1">
+            <div class="message-avatar me-3 flex-shrink-0 mt-1 d-flex flex-column align-items-center">
                 <div class="avatar-circle ai-avatar d-flex align-items-center justify-content-center shadow-sm" style="border: none; background-color: transparent;">
-                    <img src="/static/images/logo.png?v=1.2" alt="UMI" class="wave-float" style="width: 28px; height: 28px; object-fit: contain;">
+                    <img src="/static/images/logo.png?v=2.0" alt="UMI" class="wave-float" style="width: 28px; height: 28px; object-fit: contain;">
                 </div>
+                <span class="ultra-small fw-semibold mt-1" style="color: var(--text-muted); font-size: 0.65rem;">UMI</span>
             </div>
             <div class="message-content-box d-flex flex-column align-items-start w-100 max-w-75">
                 <div class="message-bubble ai-card w-100">
                     <div class="message-text markdown-body" style="white-space: pre-wrap;"></div>
                 </div>
-                <div class="message-meta mt-2 d-flex align-items-center gap-2 text-muted ultra-small">
-                    <span class="timestamp fw-medium">${time}</span>
+                <div class="message-meta mt-1 d-flex align-items-center gap-2 text-muted ultra-small">
+                    <span class="timestamp fw-medium" style="font-size: 0.72rem;">${time}</span>
                     <span class="generation-time text-xs opacity-75 ms-2" id="${placeholderId}-duration"></span>
                 </div>
             </div>
@@ -247,14 +268,17 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadedFileIds = [];
         if (filePreviewArea) {
             filePreviewArea.innerHTML = '';
-            filePreviewArea.style.display = 'none';
+            filePreviewArea.classList.add('d-none');
+            filePreviewArea.classList.remove('d-flex');
         }
+
+        const currentCsrfToken = getCookie('csrftoken');
 
         fetch(`/chat/${chatUUID}/send/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken
+                'X-CSRFToken': currentCsrfToken
             },
             body: JSON.stringify({
                 content: text,
@@ -264,6 +288,19 @@ document.addEventListener('DOMContentLoaded', () => {
             signal: signal
         })
         .then(async response => {
+            if (!response.ok) {
+                let errorMsg = `Server Error (${response.status})`;
+                try {
+                    const errData = await response.json();
+                    if (errData.error) errorMsg = errData.error;
+                } catch (e) {}
+                window.showToast(errorMsg);
+                if (typingIndicator) typingIndicator.classList.add('d-none');
+                setGeneratingState(false);
+                if (aiNode) aiNode.remove();
+                return;
+            }
+
             const contentType = response.headers.get('content-type') || '';
             console.log(`[UMI] Response received | Status: ${response.status} | Type: ${contentType.split(';')[0]}`);
             
@@ -427,13 +464,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${escapeHTML(text)}
                     </div>
                 </div>
-                <div class="message-meta mt-2 d-flex align-items-center gap-2 text-muted ultra-small flex-row-reverse">
-                    <span class="timestamp opacity-75">${time}</span>
-                    <button class="btn btn-sm btn-icon text-muted p-0 me-2 hover-lift edit-message-btn" title="Edit" style="width: 20px; height: 20px;"><i class="bi bi-pencil text-xs"></i></button>
+                <div class="message-meta mt-1 d-flex align-items-center gap-1 text-muted ultra-small flex-row-reverse">
+                    <span class="timestamp opacity-75" style="font-size: 0.72rem;">${time}</span>
+                    <i class="bi bi-check2-all text-primary opacity-90" style="font-size: 0.85rem;" title="Delivered"></i>
+                    <button class="btn btn-sm btn-icon text-muted p-0 me-1 hover-lift edit-message-btn" title="Edit message" style="width: 18px; height: 18px;"><i class="bi bi-pencil text-xs"></i></button>
                 </div>
             </div>
             <div class="message-avatar ms-3 flex-shrink-0 mt-1">
-                <div class="avatar-circle bg-primary text-white d-flex align-items-center justify-content-center shadow-sm hover-lift">
+                <div class="avatar-circle user-avatar-blue d-flex align-items-center justify-content-center shadow-sm">
                     JD
                 </div>
             </div>
@@ -775,7 +813,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleFilesSelection(files) {
         if (!files || files.length === 0) return;
-        filePreviewArea.style.display = 'flex';
+        filePreviewArea.classList.remove('d-none');
+        filePreviewArea.classList.add('d-flex');
         
         Array.from(files).forEach(file => {
             // Check allowed formats
@@ -866,7 +905,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 cardNode.remove();
                 if (filePreviewArea.children.length === 0) {
-                    filePreviewArea.style.display = 'none';
+                    filePreviewArea.classList.add('d-none');
+                    filePreviewArea.classList.remove('d-flex');
                 }
             });
         });

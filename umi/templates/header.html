@@ -1,84 +1,79 @@
-{% load static %}
-<header class="header glass border-bottom px-4 d-flex align-items-center justify-content-between position-sticky top-0 w-100" style="height: 56px; border-color: var(--border-color) !important;">
-    <div class="d-flex align-items-center gap-3">
-        <button class="btn btn-icon d-md-none p-1" id="openSidebar" title="Open Sidebar">
+<header class="chat-header d-flex align-items-center justify-content-between px-3 py-2 border-bottom" style="background: var(--header-bg); border-color: var(--border-color) !important; min-height: 56px;">
+    <!-- Left Header Info -->
+    <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-icon d-md-none text-muted" id="mobileSidebarToggle" title="Toggle Sidebar">
             <i class="bi bi-list fs-4"></i>
         </button>
-        
+
         <div class="d-flex align-items-center gap-2">
-            <!-- Brand Dropdown Selector -->
-            <div class="dropdown">
-                <button class="btn btn-link text-decoration-none dropdown-toggle d-flex align-items-center gap-1 p-0 fw-semibold fs-5 border-0 shadow-none" id="headerTitleDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="color: var(--text-main);">
-                    <span>UMI</span>
-                </button>
-                <ul class="dropdown-menu shadow border-0 py-2 rounded-xl" style="background-color: var(--card-bg); border: 1px solid var(--border-color) !important; font-size: 0.825rem;">
-                    <li class="dropdown-header text-xs text-uppercase px-3 py-1">Active Model</li>
-                    <li><span class="dropdown-item-text fw-medium py-1 text-primary"><i class="bi bi-cpu me-2"></i>{{ user_settings.ai_provider }}: {{ user_settings.ai_model }}</span></li>
-                    <li><hr class="dropdown-divider opacity-25"></li>
-                    <li><a class="dropdown-item py-2" href="{% url 'settings' %}"><i class="bi bi-gear me-2"></i>Change in Settings</a></li>
-                </ul>
-            </div>
-            
+            <h1 class="h6 mb-0 fw-semibold text-truncate" style="color: var(--text-main); max-width: 280px;" id="headerTitle">
+                {{ page_title|default:"New Chat" }}
+            </h1>
+
             {% if active_chat %}
-            <div class="d-flex align-items-center gap-1 ms-3">
-                <span class="text-muted text-xs d-none d-lg-inline-block">| &nbsp; {{ active_chat.title }}</span>
-                
-                <!-- Compact Header Actions -->
-                <div class="d-flex align-items-center gap-1 ms-2">
-                    <button class="btn btn-icon btn-sm hover-lift pin-header-btn" data-id="{{ active_chat.id }}" title="{% if active_chat.is_pinned %}Unpin Chat{% else %}Pin Chat{% endif %}" style="width: 26px; height: 26px;">
-                        <i class="bi {% if active_chat.is_pinned %}bi-pin-angle-fill text-primary{% else %}bi-pin{% endif %}" style="font-size: 0.85rem;"></i>
-                    </button>
-                    <button class="btn btn-icon btn-sm hover-lift archive-header-btn" data-id="{{ active_chat.id }}" title="{% if active_chat.is_archived %}Unarchive Chat{% else %}Archive Chat{% endif %}" style="width: 26px; height: 26px;">
-                        <i class="bi {% if active_chat.is_archived %}bi-archive-fill text-primary{% else %}bi-archive{% endif %}" style="font-size: 0.85rem;"></i>
-                    </button>
-                    <div class="dropdown">
-                        <button class="btn btn-icon btn-sm hover-lift" data-bs-toggle="dropdown" title="Export Chat" style="width: 26px; height: 26px;">
-                            <i class="bi bi-download" style="font-size: 0.85rem;"></i>
-                        </button>
-                        <ul class="dropdown-menu shadow border-0 py-1" style="font-size: 0.8rem; background-color: var(--card-bg);">
-                            <li><a class="dropdown-item py-1" href="{% url 'export_chat' active_chat.id 'pdf' %}"><i class="bi bi-file-earmark-pdf text-danger me-2"></i>PDF</a></li>
-                            <li><a class="dropdown-item py-1" href="{% url 'export_chat' active_chat.id 'docx' %}"><i class="bi bi-file-earmark-word text-primary me-2"></i>DOCX</a></li>
-                            <li><a class="dropdown-item py-1" href="{% url 'export_chat' active_chat.id 'markdown' %}"><i class="bi bi-markdown text-success me-2"></i>Markdown</a></li>
-                            <li><a class="dropdown-item py-1" href="{% url 'export_chat' active_chat.id 'txt' %}"><i class="bi bi-file-earmark-text text-secondary me-2"></i>Text</a></li>
-                            <li><a class="dropdown-item py-1" href="{% url 'export_chat' active_chat.id 'json' %}"><i class="bi bi-braces text-warning me-2"></i>JSON</a></li>
-                        </ul>
-                    </div>
-                    <button class="btn btn-icon btn-sm hover-lift text-danger delete-header-btn" data-id="{{ active_chat.id }}" title="Delete Chat" style="width: 26px; height: 26px;">
-                        <i class="bi bi-trash" style="font-size: 0.85rem;"></i>
-                    </button>
-                </div>
+            <!-- Model & Style Badges -->
+            <div class="d-none d-sm-flex align-items-center gap-2 ms-2">
+                <span class="badge rounded-pill bg-body-secondary text-body-secondary border fw-normal" style="font-size: 0.7rem;">
+                    <i class="bi bi-cpu me-1"></i>{{ user_settings.ai_model|default:"qwen2.5:0.5b" }}
+                </span>
+                <span class="badge rounded-pill bg-body-secondary text-body-secondary border fw-normal text-capitalize" style="font-size: 0.7rem;">
+                    <i class="bi bi-sliders me-1"></i>{{ user_settings.response_style|default:"balanced" }}
+                </span>
+            </div>
+
+            <!-- Header Quick Actions Dropdown -->
+            <div class="dropdown">
+                <button class="btn btn-icon btn-sm text-muted rounded-circle" data-bs-toggle="dropdown" aria-expanded="false" title="Chat Options">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu shadow-lg border-0 rounded-3" style="background-color: var(--card-bg);">
+                    <li><a class="dropdown-item py-2 d-flex align-items-center" href="#" id="renameHeaderBtn" data-id="{{ active_chat.id }}" data-title="{{ active_chat.title }}"><i class="bi bi-pencil-square me-2 text-muted"></i>Rename Chat</a></li>
+                    <li><a class="dropdown-item py-2 d-flex align-items-center" href="#" id="pinHeaderBtn" data-id="{{ active_chat.id }}"><i class="bi bi-pin me-2 text-muted"></i>{% if active_chat.is_pinned %}Unpin{% else %}Pin{% endif %} Chat</a></li>
+                    <li><a class="dropdown-item py-2 d-flex align-items-center" href="#" id="duplicateHeaderBtn" data-id="{{ active_chat.id }}"><i class="bi bi-copy me-2 text-muted"></i>Duplicate Chat</a></li>
+                    <li><a class="dropdown-item py-2 d-flex align-items-center" href="#" id="archiveHeaderBtn" data-id="{{ active_chat.id }}"><i class="bi bi-archive me-2 text-muted"></i>Archive Chat</a></li>
+                    <li>
+                        <hr class="dropdown-divider opacity-25">
+                    </li>
+                    <li class="dropdown-header text-xs text-uppercase fw-bold text-muted px-3 py-1">Export Chat</li>
+                    <li><a class="dropdown-item py-2 d-flex align-items-center" href="{% url 'export_chat' active_chat.id 'json' %}"><i class="bi bi-filetype-json me-2 text-muted"></i>Export JSON</a></li>
+                    <li><a class="dropdown-item py-2 d-flex align-items-center" href="{% url 'export_chat' active_chat.id 'md' %}"><i class="bi bi-filetype-md me-2 text-muted"></i>Export Markdown</a></li>
+                    <li><a class="dropdown-item py-2 d-flex align-items-center" href="{% url 'export_chat' active_chat.id 'txt' %}"><i class="bi bi-file-text me-2 text-muted"></i>Export Plain Text</a></li>
+                    <li><a class="dropdown-item py-2 d-flex align-items-center" href="{% url 'export_chat' active_chat.id 'docx' %}"><i class="bi bi-file-word me-2 text-muted"></i>Export Word DOCX</a></li>
+                    <li>
+                        <hr class="dropdown-divider opacity-25">
+                    </li>
+                    <li><a class="dropdown-item py-2 d-flex align-items-center text-danger" href="#" id="deleteHeaderBtn" data-id="{{ active_chat.id }}"><i class="bi bi-trash3 me-2"></i>Delete Chat</a></li>
+                </ul>
             </div>
             {% endif %}
         </div>
     </div>
 
-    <div class="d-flex align-items-center gap-2">
-        <button class="btn btn-icon theme-toggle ripple" id="themeToggle" title="Toggle Dark/Light Mode">
-            <i class="bi bi-moon-stars fs-5"></i>
+    <!-- Right Header Actions -->
+    <div class="d-flex align-items-center gap-3">
+        <!-- Moon Theme Toggle -->
+        <button class="btn btn-icon theme-toggle text-muted" id="themeToggle" title="Toggle Dark/Light Mode">
+            <i class="bi bi-moon fs-5"></i>
         </button>
-        
-        <!-- Notifications Dropdown -->
-        <div class="dropdown">
-            <button class="btn btn-icon position-relative ripple" data-bs-toggle="dropdown" id="notificationBtn" title="Notifications">
-                <i class="bi bi-bell fs-5"></i>
-                <span class="position-absolute top-25 start-75 translate-middle badge rounded-pill bg-danger border border-light" id="notificationBadge" style="font-size: 0.65rem; padding: 0.2rem 0.35rem; display: none;">
-                    0
-                </span>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 mt-2 p-2" id="notificationList" style="width: 280px; background-color: var(--card-bg); font-size: 0.8rem;">
-                <li class="dropdown-header border-bottom pb-2 mb-2 d-flex justify-content-between align-items-center">
-                    <span class="fw-semibold text-dark" data-bs-theme="dark" style="color: var(--text-main);">Notifications</span>
-                    <button class="btn btn-link p-0 text-xs text-decoration-none" id="clearNotifications" style="font-size: 0.75rem;">Clear</button>
-                </li>
-                <li class="text-center py-3 text-muted" id="noNotifications">No new notifications</li>
-            </ul>
-        </div>
 
-        <div class="user-avatar ms-2 cursor-pointer dropdown">
-            <div class="avatar-circle bg-primary text-white d-flex align-items-center justify-content-center shadow-sm hover-lift" data-bs-toggle="dropdown">
-                JD
+        <!-- User Avatar Circle -->
+        <div class="user-avatar cursor-pointer dropdown">
+            <div class="avatar-circle user-avatar-blue d-flex align-items-center justify-content-center shadow-sm hover-lift" data-bs-toggle="dropdown" style="overflow: hidden;">
+                {% if user.settings.profile_pic %}
+                    <img src="{{ user.settings.profile_pic.url }}" alt="{{ user.username }}" class="w-100 h-100 object-fit-cover">
+                {% else %}
+                    {% if user.first_name and user.last_name %}
+                        {{ user.first_name|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}
+                    {% else %}
+                        {{ user.username|slice:":2"|upper }}
+                    {% endif %}
+                {% endif %}
             </div>
             <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 mt-2" style="background-color: var(--card-bg);">
+                <li class="px-3 py-2 border-bottom opacity-75 small">
+                    <div class="fw-semibold text-truncate" style="color: var(--text-main);">{% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.username }}{% endif %}</div>
+                    <div class="text-muted text-xs text-truncate">{{ user.email }}</div>
+                </li>
                 <li><a class="dropdown-item py-2" href="{% url 'settings' %}#profile"><i class="bi bi-person me-2 text-muted"></i>My Profile</a></li>
                 <li><a class="dropdown-item py-2" href="{% url 'settings' %}"><i class="bi bi-gear me-2 text-muted"></i>Settings</a></li>
                 {% if active_chat %}

@@ -4,6 +4,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeBtn = document.getElementById('closeSidebar');
     const body = document.body;
 
+    // Global New Chat handler across all pages (Settings, Help, Profile, Chat)
+    const newChatBtns = document.querySelectorAll('.new-chat-btn');
+    newChatBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/chat/new/';
+        });
+    });
+
     if (openBtn) {
         openBtn.addEventListener('click', () => {
             sidebar.classList.add('show');

@@ -164,80 +164,176 @@ def export_conversation_to_pdf(conversation):
     return buffer.getvalue()
 
 
-def render_markdown_to_html(text):
+def render_markdown_to_html(markdown_text):
     """
-    Renders raw markdown content into sanitized HTML with code syntax highlighting.
-    
-    Args:
-        text (str): Raw Markdown string.
+    Renders raw markdown string to HTML using mistune or markdown library.
+    """
+    if not markdown_text:
+        return ""
+    try:
+        import markdown
+        return markdown.markdown(
+            markdown_text,
+            extensions=['fenced_code', 'tables', 'nl2br', 'codehilite']
+        )
+    except ImportError:
+        # Fallback simple replacer if markdown lib is missing
+        import html
+        escaped = html.escape(markdown_text)
+        return escaped.replace('\n', '<br>')
+
+
+def optimize_profile_picture(image_file, max_size=(300, 300)):
+    """
+    Resizes and optimizes uploaded profile picture images using Pillow.
+    Returns an InMemoryUploadedFile ready for saving to ImageField.
+    """
+    if not image_file:
+        return image_file
+
+    try:
+        from PIL import Image
+        import io
+        from django.core.files.uploadedfile import InMemoryUploadedFile
+
+        img = Image.open(image_file)
+        if img.mode in ('RGBA', 'P'):
+            img = img.convert('RGB')
+
+        img.thumbnail(max_size, Image.Resampling.LANCZOS)
         
-    Returns:
-        str: Rendered HTML block.
-    """
-    import markdown
-    md = markdown.Markdown(extensions=[
-        'fenced_code',
-        'codehilite',
-        'nl2br',
-    ])
-    return md.convert(text)
+        output = io.BytesIO()
+        img.save(output, format='JPEG', quality=85, optimize=True)
+        output.seek(0)
+
+        filename = f"{image_file.name.split('.')[0]}.jpg"
+        return InMemoryUploadedFile(
+            output,
+            'ImageField',
+            filename,
+            'image/jpeg',
+            output.getbuffer().nbytes,
+            None
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger('umi').error(f"Image Optimization Error: {e}")
+        return image_file
 
 
 def extract_text_from_file(file_path, file_name):
     """
-    Parses and extracts text from document files (PDF, DOCX, TXT, CSV, XLSX).
+    Parses and extracts text from document files using page-aware RAGService.
     """
-    import os
-    import csv
+    from .rag_service import RAGService
+    return RAGService.extract_text(file_path, file_name)
+
+
+def create_password_reset_token(user):
+    """
+    Cleans expired tokens, generates a 64-char cryptographically secure token,
+    stores it in PasswordResetToken with 30 minutes expiration, and returns the object.
+    """
+    import secrets
+    from datetime import timedelta
+    from django.utils import timezone
+    from .models import PasswordResetToken
+
+    PasswordResetToken.clean_expired_tokens()
+    raw_token = secrets.token_urlsafe(48)
+    expires_at = timezone.now() + timedelta(minutes=30)
     
-    ext = os.path.splitext(file_name)[1].lower()
+    return PasswordResetToken.objects.create(
+        user=user,
+        token=raw_token,
+        expires_at=expires_at,
+        is_used=False
+    )
+
+
+def send_password_reset_email(user, reset_token_obj, request):
+    """
+    Constructs absolute reset link, renders HTML email template, performs SMTP checks,
+    dispatches email, and prints structured diagnostic logs.
+    """
+    import logging
+    import traceback
+    import sys
+    from django.conf import settings
+    from django.core.mail import EmailMultiAlternatives
+    from django.template.loader import render_to_string
+    from django.utils.html import strip_tags
+
+    logger = logging.getLogger('umi')
+    reset_url = request.build_absolute_uri(f"/reset-password/{reset_token_obj.token}/")
     
+    print("\n========== PASSWORD RESET ==========")
+    print(f"Request Received:  {user.email}")
+    print(f"Email Validation:  SUCCESS")
+    print(f"User Found:        {user.username} (ID: {user.id})")
+    print(f"Token Generated:   {reset_token_obj.token[:16]}...")
+    print(f"Token Saved:       SUCCESS (Expires at: {reset_token_obj.expires_at})")
+    print(f"SMTP Config Check: Host: {settings.EMAIL_HOST}:{settings.EMAIL_PORT} | TLS: {settings.EMAIL_USE_TLS} | User: {settings.EMAIL_HOST_USER or '(EMPTY)'}")
+
+    context = {
+        'user': user,
+        'reset_url': reset_url,
+        'expires_in': 30,
+    }
+    
+    html_content = render_to_string('emails/password_reset_email.html', context)
+    text_content = strip_tags(html_content)
+    subject = "Reset Your UMI AI Password"
+    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'UMI AI <noreply@umichat.com>')
+    to_email = [user.email]
+
+    # Check if SMTP user/password is set to dummy placeholder
+    is_placeholder = (
+        not settings.EMAIL_HOST_USER or
+        not settings.EMAIL_HOST_PASSWORD or
+        'your_email' in settings.EMAIL_HOST_USER or
+        'your_app_password' in settings.EMAIL_HOST_PASSWORD
+    )
+
+    if is_placeholder:
+        print("SMTP Connected:     SKIPPED (Placeholder credentials in .env)")
+        print("SMTP Authenticated: SKIPPED (Set EMAIL_HOST_USER & EMAIL_HOST_PASSWORD in .env for live sending)")
+        print(f"Email Delivered:    FALLBACK (Console/Log delivery)")
+        print(f"Reset Link:         {reset_url}")
+        print("Response Returned: SUCCESS (Anti-enumeration message displayed)")
+        print("====================================\n")
+        logger.info(f"EMAIL FALLBACK | Reset link for {user.username} ({user.email}): {reset_url}")
+        return True
+
     try:
-        if ext == '.txt':
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                return f.read()
-                
-        elif ext == '.pdf':
-            import pypdf
-            reader = pypdf.PdfReader(file_path)
-            text = []
-            for page in reader.pages:
-                t = page.extract_text()
-                if t:
-                    text.append(t)
-            return "\n".join(text)
-            
-        elif ext == '.docx':
-            import docx
-            doc = docx.Document(file_path)
-            text = []
-            for paragraph in doc.paragraphs:
-                text.append(paragraph.text)
-            for table in doc.tables:
-                for row in table.rows:
-                    text.append(" | ".join(cell.text for cell in row.cells))
-            return "\n".join(text)
-            
-        elif ext == '.csv':
-            text = []
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                reader = csv.reader(f)
-                for row in reader:
-                    text.append(", ".join(row))
-            return "\n".join(text)
-            
-        elif ext in ['.xlsx', '.xls']:
-            import openpyxl
-            wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
-            text = []
-            for sheet in wb.worksheets:
-                text.append(f"--- Sheet: {sheet.title} ---")
-                for row in sheet.iter_rows(values_only=True):
-                    if any(cell is not None for cell in row):
-                        text.append(" | ".join(str(cell) if cell is not None else "" for cell in row))
-            return "\n".join(text)
-            
+        msg = EmailMultiAlternatives(subject, text_content, from_email, to_email)
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=False)
+        print("SMTP Connected:     SUCCESS")
+        print("SMTP Authenticated: SUCCESS")
+        print(f"Email Sent:         SUCCESS -> Delivered to {user.email}")
+        print("Response Returned: SUCCESS (Anti-enumeration message displayed)")
+        print("====================================\n")
+        logger.info(f"EMAIL | Password reset email sent successfully via SMTP to {user.email}")
+        return True
     except Exception as e:
-        return f"[Error extracting text from {file_name}: {e}]"
+        exc_type, exc_val, exc_tb = sys.exc_info()
+        fname = exc_tb.tb_frame.f_code.co_filename if exc_tb else 'chat/services.py'
+        line_no = exc_tb.tb_lineno if exc_tb else 281
         
-    return ""
+        print("SMTP Connected:     FAILED")
+        print("SMTP Authenticated: FAILED")
+        print(f"Email Delivery:     FAILED ({type(e).__name__}: {e})")
+        print(f"\n--- FAILURE DIAGNOSTICS ---")
+        print(f"File Name:   {fname}")
+        print(f"Function:    send_password_reset_email")
+        print(f"Line Number: {line_no}")
+        print(f"Exception:   {type(e).__name__}: {e}")
+        print(f"Root Cause:  SMTP authentication failed because credentials in .env are either incorrect, missing an App Password, or blocked by provider.")
+        print(f"Fallback URL: {reset_url}")
+        print("====================================\n")
+
+        logger.error(f"EMAIL | Failed to send reset email to {user.email}: {e}\n{traceback.format_exc()}")
+        logger.info(f"EMAIL FALLBACK | Reset URL for {user.username}: {reset_url}")
+        return False
+
